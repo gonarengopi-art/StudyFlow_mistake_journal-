@@ -1,0 +1,121 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global Safety Net default closed loop
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // Subject validation function
+    function isValidSubject(data) {
+      return data.keys().hasAll(['id', 'name', 'userId'])
+        && data.keys().size() == 3
+        && data.id is string && data.id.size() <= 128 && data.id.size() > 0
+        && data.name is string && data.name.size() <= 200 && data.name.size() > 0
+        && data.userId == request.auth.uid;
+    }
+
+    // Topic validation function
+    function isValidTopic(data) {
+      return data.keys().hasAll(['id', 'subjectId', 'name', 'userId'])
+        && data.keys().size() == 4
+        && data.id is string && data.id.size() <= 128 && data.id.size() > 0
+        && data.subjectId is string && data.subjectId.size() <= 128 && data.subjectId.size() > 0
+        && data.name is string && data.name.size() <= 200 && data.name.size() > 0
+        && data.userId == request.auth.uid;
+    }
+
+    // Subtopic validation function
+    function isValidSubtopic(data) {
+      return data.keys().hasAll(['id', 'topicId', 'name', 'userId'])
+        && data.keys().size() == 4
+        && data.id is string && data.id.size() <= 128 && data.id.size() > 0
+        && data.topicId is string && data.topicId.size() <= 128 && data.topicId.size() > 0
+        && data.name is string && data.name.size() <= 200 && data.name.size() > 0
+        && data.userId == request.auth.uid;
+    }
+
+    // Mistake validation function
+    function isValidMistake(data) {
+      return data.keys().hasAll([
+        'id', 'title', 'subjectId', 'topicId', 'dateLogged',
+        'originalQuestion', 'myAnswer', 'correctAnswer', 'whatIGotWrong',
+        'correctExplanation', 'reflection', 'futureAdvice', 'categories',
+        'status', 'userId'
+      ])
+        && data.keys().size() >= 15 && data.keys().size() <= 19
+        && data.id is string && data.id.size() <= 128 && data.id.size() > 0
+        && data.title is string && data.title.size() <= 200 && data.title.size() > 0
+        && data.subjectId is string && data.subjectId.size() <= 128
+        && data.topicId is string && data.topicId.size() <= 128
+        && (!data.keys().hasAny(['subtopicId']) || (data.subtopicId is string && data.subtopicId.size() <= 128))
+        && data.dateLogged is string && data.dateLogged.size() <= 20
+        && (!data.keys().hasAny(['imageUrl']) || (data.imageUrl is string && data.imageUrl.size() <= 2000000))
+        && (!data.keys().hasAny(['fileUrl']) || (data.fileUrl is string && data.fileUrl.size() <= 2000000))
+        && (!data.keys().hasAny(['fileName']) || (data.fileName is string && data.fileName.size() <= 500))
+        && data.originalQuestion is string && data.originalQuestion.size() <= 50000
+        && data.myAnswer is string && data.myAnswer.size() <= 50000
+        && data.correctAnswer is string && data.correctAnswer.size() <= 50000
+        && data.whatIGotWrong is string && data.whatIGotWrong.size() <= 50000
+        && data.correctExplanation is string && data.correctExplanation.size() <= 50000
+        && data.reflection is string && data.reflection.size() <= 50000
+        && data.futureAdvice is string && data.futureAdvice.size() <= 50000
+        && data.categories is list && data.categories.size() <= 20
+        && data.status in ['New', 'Reviewing', 'Mastered']
+        && data.userId == request.auth.uid;
+    }
+
+    // UserSetting validation function
+    function isValidUserSetting(data) {
+      return data.keys().hasAll(['userId', 'userName'])
+        && data.keys().size() == 2
+        && data.userId == request.auth.uid
+        && data.userName is string && data.userName.size() <= 100;
+    }
+
+    // MATCH BLOCKS FOR ALL ENTITIES
+    
+    match /subjects/{subjectId} {
+      allow create: if isSignedIn() && isValidId(subjectId) && isValidSubject(request.resource.data);
+      allow read, list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow update: if isSignedIn() && isValidSubject(request.resource.data) && resource.data.userId == request.auth.uid;
+      allow delete: if isSignedIn() && resource.data.userId == request.auth.uid;
+    }
+
+    match /topics/{topicId} {
+      allow create: if isSignedIn() && isValidId(topicId) && isValidTopic(request.resource.data);
+      allow read, list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow update: if isSignedIn() && isValidTopic(request.resource.data) && resource.data.userId == request.auth.uid;
+      allow delete: if isSignedIn() && resource.data.userId == request.auth.uid;
+    }
+
+    match /subtopics/{subtopicId} {
+      allow create: if isSignedIn() && isValidId(subtopicId) && isValidSubtopic(request.resource.data);
+      allow read, list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow update: if isSignedIn() && isValidSubtopic(request.resource.data) && resource.data.userId == request.auth.uid;
+      allow delete: if isSignedIn() && resource.data.userId == request.auth.uid;
+    }
+
+    match /mistakes/{mistakeId} {
+      allow create: if isSignedIn() && isValidId(mistakeId) && isValidMistake(request.resource.data);
+      allow read, list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow update: if isSignedIn() && isValidMistake(request.resource.data) && resource.data.userId == request.auth.uid;
+      allow delete: if isSignedIn() && resource.data.userId == request.auth.uid;
+    }
+
+    match /usersettings/{userId} {
+      allow create, update: if isSignedIn() && userId == request.auth.uid && isValidUserSetting(request.resource.data);
+      allow read: if isSignedIn() && userId == request.auth.uid;
+    }
+  }
+}

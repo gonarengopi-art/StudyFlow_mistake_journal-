@@ -1,0 +1,6 @@
+{
+  "name": "StudyFlow Mistake Journal",
+  "description": "A sophisticated academic and personal journal that helps students systematically log, organize, browse, review, and master their academic mistakes.",
+  "requestFramePermissions": ["camera"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

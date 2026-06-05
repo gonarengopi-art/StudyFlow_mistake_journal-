@@ -1,0 +1,98 @@
+{
+  "entities": {
+    "Subject": {
+      "title": "Subject",
+      "description": "A study subject mapping mistakes",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Subject unique ID" },
+        "name": { "type": "string", "description": "Name of the subject" },
+        "userId": { "type": "string", "description": "Owner user UID" }
+      },
+      "required": ["id", "name", "userId"]
+    },
+    "Topic": {
+      "title": "Topic",
+      "description": "A specific topic category under a subject",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Topic unique ID" },
+        "subjectId": { "type": "string", "description": "Parent subject ID" },
+        "name": { "type": "string", "description": "Name of the topic" },
+        "userId": { "type": "string", "description": "Owner user UID" }
+      },
+      "required": ["id", "subjectId", "name", "userId"]
+    },
+    "Subtopic": {
+      "title": "Subtopic",
+      "description": "A refined subcategory nested under a topic",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Subtopic unique ID" },
+        "topicId": { "type": "string", "description": "Parent topic ID" },
+        "name": { "type": "string", "description": "Name of the subtopic" },
+        "userId": { "type": "string", "description": "Owner user UID" }
+      },
+      "required": ["id", "topicId", "name", "userId"]
+    },
+    "Mistake": {
+      "title": "Mistake",
+      "description": "A specific logging of an exam or study mistake",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Mistake entry unique ID" },
+        "title": { "type": "string", "description": "Discourse or reference title of mistake" },
+        "subjectId": { "type": "string", "description": "Mapped subject ID" },
+        "topicId": { "type": "string", "description": "Mapped topic ID" },
+        "subtopicId": { "type": "string", "description": "Mapped subtopic ID" },
+        "dateLogged": { "type": "string", "format": "date", "description": "Date logged as YYYY-MM-DD" },
+        "imageUrl": { "type": "string", "description": "Optional image data" },
+        "fileUrl": { "type": "string", "description": "Optional original question file attachment" },
+        "fileName": { "type": "string", "description": "Optional file name" },
+        "originalQuestion": { "type": "string", "description": "Question concept prompt description" },
+        "myAnswer": { "type": "string", "description": "Student's wrong answer description" },
+        "correctAnswer": { "type": "string", "description": "Actual correct solution" },
+        "whatIGotWrong": { "type": "string", "description": "Diagnostic of what went wrong" },
+        "correctExplanation": { "type": "string", "description": "Concepts or solution rules" },
+        "reflection": { "type": "string", "description": "Students metacognitive evaluation" },
+        "futureAdvice": { "type": "string", "description": "Tactical guidance to future self" },
+        "categories": { "type": "array", "description": "Array of mistake categories" },
+        "status": { "type": "string", "enum": ["New", "Reviewing", "Mastered"], "description": "Review progress state" },
+        "userId": { "type": "string", "description": "Owner user UID" }
+      },
+      "required": ["id", "title", "subjectId", "topicId", "dateLogged", "originalQuestion", "myAnswer", "correctAnswer", "whatIGotWrong", "correctExplanation", "reflection", "futureAdvice", "categories", "status", "userId"]
+    },
+    "UserSetting": {
+      "title": "UserSetting",
+      "description": "User custom name and other preferences",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Identifier UID" },
+        "userName": { "type": "string", "description": "Human representation name" }
+      },
+      "required": ["userId", "userName"]
+    }
+  },
+  "firestore": {
+    "subjects/{subjectId}": {
+      "schema": "Subject",
+      "description": "User specific subjects collection"
+    },
+    "topics/{topicId}": {
+      "schema": "Topic",
+      "description": "User specific topics collection"
+    },
+    "subtopics/{subtopicId}": {
+      "schema": "Subtopic",
+      "description": "User specific subtopics collection"
+    },
+    "mistakes/{mistakeId}": {
+      "schema": "Mistake",
+      "description": "Logged mistake records collection"
+    },
+    "usersettings/{userId}": {
+      "schema": "UserSetting",
+      "description": "User settings configurations document"
+    }
+  }
+}
