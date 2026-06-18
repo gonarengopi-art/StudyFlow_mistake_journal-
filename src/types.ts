@@ -40,6 +40,7 @@ export interface MistakeEntry {
   subtopicId?: string; // Subtopic is optional as per core structure list
   dateLogged: string; // YYYY-MM-DD
   imageUrl?: string; // Path or base64 data for display
+  imageUrls?: string[]; // Supporting multiple uploaded images / photos
   fileUrl?: string; // Placeholders or dummy file
   fileName?: string;
 

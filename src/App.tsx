@@ -14,10 +14,13 @@ import { MistakeDetailView } from './components/MistakeDetailView';
 import { CreateMistakeView } from './components/CreateMistakeView';
 import { ProfileView } from './components/ProfileView';
 import { InsightsView } from './components/InsightsView';
+import { AdminView } from './components/AdminView';
 import { QuickAddModal } from './components/QuickAddModal';
 import { LandingPage } from './components/LandingPage';
+import { OnboardingModal } from './components/OnboardingModal';
+import { NewsletterModal } from './components/NewsletterModal';
 
-import { Sparkles, Calendar, BookOpen, AlertCircle, X, ChevronRight, CheckCircle, GraduationCap, Eye } from 'lucide-react';
+import { Sparkles, Calendar, BookOpen, AlertCircle, X, ChevronRight, CheckCircle, GraduationCap, Eye, ZoomIn, ZoomOut, RotateCcw, Maximize2 } from 'lucide-react';
 import { INITIAL_SUBJECTS, INITIAL_TOPICS, INITIAL_SUBTOPICS, INITIAL_MISTAKES } from './initialData';
 
 export default function App() {
@@ -50,11 +53,30 @@ export default function App() {
   const [currentView, setCurrentView] = useState<ViewTab>('dashboard');
   const [selectedMistakeId, setSelectedMistakeId] = useState<string | null>(null);
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
+  const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
+
+  const isNewsletterOpen = useMemo(() => {
+    // Show only to logged-in users when they haven't set their preference yet
+    if (!store.user) return false;
+    if (store.loading) return false;
+    if (!store.userDocData) return false;
+    return store.userDocData.newsletterOptIn === undefined;
+  }, [store.user, store.loading, store.userDocData]);
   
   // Custom user name persisted locally, defaulting to clean anonymous state
   const [userName, setUserName] = useState<string>(() => {
     return localStorage.getItem('studyflow_username') || 'New Scholar';
   });
+
+  // Automatically trigger onboarding check when user accesses dashboard (either via guest mode or google auth login)
+  useEffect(() => {
+    if (store.user || guestMode) {
+      const onboarded = localStorage.getItem('studyflow_onboarded');
+      if (onboarded !== 'true') {
+        setIsOnboardingOpen(true);
+      }
+    }
+  }, [store.user, guestMode]);
 
   // Dynamically resolve display name based on Firebase Auth identity status
   const resolvedUserName = useMemo(() => {
@@ -76,6 +98,8 @@ export default function App() {
   const [isReviewSetupActive, setIsReviewSetupActive] = useState<boolean>(true);
   const [includeMasteredInReview, setIncludeMasteredInReview] = useState<boolean>(false);
   const [scratchpadText, setScratchpadText] = useState<string>('');
+  const [reviewLightboxImgUrl, setReviewLightboxImgUrl] = useState<string | null>(null);
+  const [reviewLightboxZoom, setReviewLightboxZoom] = useState<number>(1);
 
   // Active mistakes for review
   const reviewMistakes = useMemo(() => {
@@ -230,6 +254,32 @@ export default function App() {
 
       {/* Main Content Layout container */}
       <main className="max-w-7xl mx-auto px-4 md:px-8 pt-24 pb-32">
+        {store.quotaExceeded && (
+          <div className="bg-[#D98A6C]/10 border border-[#D98A6C]/30 p-4 rounded-2xl mb-6 text-sm text-[#2D2A26] flex flex-col md:flex-row md:items-center justify-between gap-4 animate-fade-in font-sans">
+            <div className="flex items-start gap-3">
+              <span className="p-1 px-2 bg-[#D98A6C] text-white rounded-md shrink-0 font-bold text-[10px] uppercase tracking-wider">
+                QUOTA ALERT
+              </span>
+              <div className="space-y-1">
+                <p className="font-semibold text-xs md:text-sm">
+                  Firestore free daily read units quota exceeded for this shared sandbox.
+                </p>
+                <p className="text-xs text-[#6B6357] leading-relaxed">
+                  Your cloud-synced folders may temporarily be offline, but you can still fully construct, view, and read your mistake journal locally as we fell back to your local browser cache. Synchronization will automatically restore in 24 hours.
+                </p>
+              </div>
+            </div>
+            <a
+              href={`https://console.firebase.google.com/project/project-18702df5-f882-4fb9-a84/firestore/databases/ai-studio-6e96e46c-21fb-4566-98f5-1ac3ca997cff/data?openUpgradeDialog=true`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-4 py-2 bg-[#D98A6C] hover:bg-[#C17A5E] text-white font-sans text-xs font-bold uppercase tracking-widest rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 hover:scale-[1.01]"
+            >
+              Upgrade / Review limits
+            </a>
+          </div>
+        )}
+
         {!store.user && guestMode && (
           <div className="bg-[#E6E1FF]/40 border border-[#d2cbfa]/60 p-4 rounded-2xl mb-6 text-xs text-[#2D2A26] flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-fade-in font-sans">
             <div className="flex items-center gap-2">
@@ -275,6 +325,14 @@ export default function App() {
                     onStartReview={handleStartQuickReview}
                     userName={resolvedUserName}
                     onOpenQuickAdd={() => setIsQuickAddOpen(true)}
+                    onOpenOnboarding={() => setIsOnboardingOpen(true)}
+                    quotaReads={store.quotaReads}
+                    quotaLimit={store.quotaLimit}
+                    isQuotaExceeded={store.isQuotaExceeded}
+                    user={store.user}
+                    isAdmin={store.isAdmin}
+                    totalLiveReadsToday={store.totalLiveReadsToday}
+                    allUsers={store.allUsers}
                   />
                 );
               case 'topics':
@@ -348,7 +406,12 @@ export default function App() {
                     user={store.user}
                     onSignInWithGoogle={store.signInWithGoogle}
                     onLogout={handleLogout}
+                    onOpenOnboarding={() => setIsOnboardingOpen(true)}
                   />
+                );
+              case 'admin':
+                return (
+                  <AdminView user={store.user} />
                 );
               default:
                 return (
@@ -564,21 +627,51 @@ export default function App() {
                           "{reviewMistakes[reviewIndex].originalQuestion || 'No question details recorded. Edit mistake to append prompt.'}"
                         </p>
 
-                        {/* Attached image check */}
-                        {reviewMistakes[reviewIndex].imageUrl && (
-                          <div className="mt-3 bg-[#F5F2ED] border border-[#E8E2D9] rounded-xl p-2 relative overflow-hidden flex items-center justify-between gap-3 select-none">
-                            <div className="flex items-center gap-2">
-                              <span className="text-emerald-700 bg-emerald-50 border border-emerald-200 text-[9px] font-bold px-1.5 py-0.5 rounded uppercase">Image Reference Attached</span>
-                              <span className="text-[10px] text-[#6B6357] italic">Interact with full view directly from Mistake Library.</span>
-                            </div>
-                            <img
-                              src={reviewMistakes[reviewIndex].imageUrl}
-                              referrerPolicy="no-referrer"
-                              alt="Reference"
-                              className="w-12 h-12 object-cover rounded-lg border border-[#E8E2D9]"
-                            />
-                          </div>
-                        )}
+                         {/* Attached image check */}
+                        {(() => {
+                           const currentM = reviewMistakes[reviewIndex];
+                           const imgs = currentM.imageUrls && currentM.imageUrls.length > 0
+                             ? currentM.imageUrls
+                             : (currentM.imageUrl ? [currentM.imageUrl] : []);
+                           if (imgs.length === 0) return null;
+                           return (
+                             <div className="mt-3 bg-[#F5F2ED] border border-[#E8E2D9] rounded-xl p-3 relative overflow-hidden space-y-2 select-none">
+                               <div className="flex items-center justify-between">
+                                 <span className="text-emerald-700 bg-emerald-50 border border-emerald-200 text-[9px] font-bold px-1.5 py-0.5 rounded uppercase">
+                                   {imgs.length} Reference Photo{imgs.length > 1 ? 's' : ''} Attached
+                                 </span>
+                                 <span className="text-[10px] text-[#5A5A40] font-sans font-medium flex items-center gap-1">
+                                   <Eye className="w-3.5 h-3.5 text-[#D98A6C]" /> Click photo to zoom in
+                                 </span>
+                               </div>
+                               <div className="flex gap-2.5 overflow-x-auto pb-1 scrollbar-thin">
+                                 {imgs.map((url, idx) => (
+                                   <button
+                                     key={idx}
+                                     type="button"
+                                     onClick={(e) => {
+                                       e.stopPropagation();
+                                       setReviewLightboxImgUrl(url);
+                                       setReviewLightboxZoom(1);
+                                     }}
+                                     className="relative w-20 h-14 flex-shrink-0 border border-[#E8E2D9] hover:border-[#5A5A40] rounded-xl overflow-hidden cursor-pointer transition-all hover:scale-102 hover:shadow-xs focus:outline-none focus:ring-1 focus:ring-[#5A5A40]/30 group"
+                                     title="Click to view full screen"
+                                   >
+                                     <img
+                                       src={url}
+                                       referrerPolicy="no-referrer"
+                                       alt={`Reference ${idx + 1}`}
+                                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-350"
+                                     />
+                                     <div className="absolute inset-0 bg-black/10 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                       <Maximize2 className="w-3.5 h-3.5 text-white drop-shadow-sm" />
+                                     </div>
+                                   </button>
+                                 ))}
+                                </div>
+                             </div>
+                           );
+                         })()}
                       </div>
 
                       {/* Active scratchpad response area */}
@@ -635,28 +728,16 @@ export default function App() {
                           )}
 
                           {/* Reflections and Advice block */}
-                          <div className="bg-[#EAEAF2] border border-[#E8E2D9] p-4 rounded-xl text-stone-850">
-                            {reviewMistakes[reviewIndex].futureAdvice && (
-                              <div className="mb-2">
-                                <span className="font-sans text-[10px] font-bold text-[#5e5c75] uppercase tracking-wider block mb-0.5">
-                                  Future Self Advice (Next Time Strategy):
-                                </span>
-                                <p className="font-serif text-sm font-semibold italic text-[#2D2A26]">
-                                  "{reviewMistakes[reviewIndex].futureAdvice}"
-                                </p>
-                              </div>
-                            )}
-                            {reviewMistakes[reviewIndex].reflection && (
-                              <div className="border-t border-[#E8E2D9] pt-2 mt-2">
-                                <span className="font-sans text-[10px] font-bold text-[#5e5c75] uppercase tracking-wider block mb-0.5">
-                                  My Self-Reflection (Conceptual Deep-Dive):
-                                </span>
-                                <p className="font-sans text-xs text-[#4D453E]">
-                                  {reviewMistakes[reviewIndex].reflection}
-                                </p>
-                              </div>
-                            )}
-                          </div>
+                          {reviewMistakes[reviewIndex].reflection && (
+                            <div className="bg-[#EAEAF2] border border-[#E8E2D9] p-4 rounded-xl text-stone-850">
+                              <span className="font-sans text-[10px] font-bold text-[#5e5c75] uppercase tracking-wider block mb-1">
+                                My Self-Reflection (Conceptual Deep-Dive):
+                              </span>
+                              <p className="font-sans text-xs text-[#4D453E]">
+                                {reviewMistakes[reviewIndex].reflection}
+                              </p>
+                            </div>
+                          )}
                         </div>
                       ) : (
                         <div className="py-2.5 text-center transition-all">
@@ -757,10 +838,116 @@ export default function App() {
         onNavigateToMistake={handleSelectMistake}
       />
 
+      {/* Interactive Onboarding Tutorial Modal overlay for new users */}
+      <OnboardingModal
+        isOpen={isOnboardingOpen}
+        onClose={() => setIsOnboardingOpen(false)}
+        userName={resolvedUserName}
+        setUserName={setUserName}
+        addSubject={store.addSubject}
+        addTopic={store.addTopic}
+      />
+
+      {/* Newsletter opt-in modal prompt for registered logged-in users */}
+      <NewsletterModal
+        isOpen={isNewsletterOpen}
+        onClose={() => store.updateNewsletterPreference(false)}
+        onSubscribe={(optIn) => store.updateNewsletterPreference(optIn)}
+        userEmail={store.user?.email || 'N/A'}
+      />
+
+      {/* Fullscreen Photo Lightbox overlay inside Review Sessions */}
+      {reviewLightboxImgUrl && (
+        <div className="fixed inset-0 bg-[#2D2A26]/95 backdrop-blur-md flex flex-col z-[210] select-none animate-fade-in font-sans">
+          {/* Header toolbar */}
+          <div className="flex items-center justify-between p-4 bg-[#2D2A26]/80 border-b border-[#E8E2D9]/10 text-white">
+            <div className="flex flex-col text-left">
+              <span className="text-[9px] font-bold uppercase tracking-widest text-[#D98A6C]">Review Fullscreen Viewer</span>
+              <h4 className="text-xs font-serif font-bold text-[#FDFCF8] max-w-[200px] md:max-w-md line-clamp-1">Active Recall Reference Image</h4>
+            </div>
+            
+            {/* Control buttons */}
+            <div className="flex items-center gap-1.5 md:gap-2">
+              <button
+                type="button"
+                onClick={() => setReviewLightboxZoom(prev => Math.max(0.5, prev - 0.25))}
+                className="p-1.5 md:p-2 bg-[#F5F2ED]/10 hover:bg-[#F5F2ED]/20 text-[#E8E2D9] hover:text-white rounded-lg transition-colors cursor-pointer"
+                title="Zoom Out"
+              >
+                <ZoomOut className="w-3.5 h-3.5 md:w-4 md:h-4" />
+              </button>
+              <span className="text-[10px] md:text-xs font-mono font-bold text-[#9A9184] min-w-[32px] md:min-w-[40px] text-center">
+                {Math.round(reviewLightboxZoom * 100)}%
+              </span>
+              <button
+                type="button"
+                onClick={() => setReviewLightboxZoom(prev => Math.min(4, prev + 0.25))}
+                className="p-1.5 md:p-2 bg-[#F5F2ED]/10 hover:bg-[#F5F2ED]/20 text-[#E8E2D9] hover:text-white rounded-lg transition-colors cursor-pointer"
+                title="Zoom In"
+              >
+                <ZoomIn className="w-3.5 h-3.5 md:w-4 md:h-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setReviewLightboxZoom(1)}
+                className="p-1.5 md:p-2 bg-[#F5F2ED]/10 hover:bg-[#F5F2ED]/20 text-[#E8E2D9] hover:text-white rounded-lg transition-colors cursor-pointer"
+                title="Reset Zoom"
+              >
+                <RotateCcw className="w-3.5 h-3.5 md:w-4 md:h-4" />
+              </button>
+              
+              <div className="w-[1px] h-5 bg-[#E8E2D9]/10 mx-0.5 md:mx-1"></div>
+              
+              <button
+                type="button"
+                onClick={() => setReviewLightboxImgUrl(null)}
+                className="p-1.5 md:p-2 bg-red-600/20 hover:bg-red-600 text-red-400 hover:text-white rounded-lg transition-colors cursor-pointer flex items-center justify-center font-bold"
+                title="Close Fullscreen"
+              >
+                <X className="w-4 h-4 md:w-5 md:h-5" />
+              </button>
+            </div>
+          </div>
+          
+          {/* Main viewing area */}
+          <div 
+            className="flex-1 w-full overflow-auto flex items-center justify-center p-4 relative cursor-zoom-out"
+            onClick={() => setReviewLightboxImgUrl(null)}
+          >
+            <div 
+              className="transition-transform duration-200 ease-out origin-center select-none"
+              style={{ transform: `scale(${reviewLightboxZoom})` }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <img
+                src={reviewLightboxImgUrl}
+                alt="Fullscreen Reference"
+                className="max-h-[75vh] max-w-full md:max-h-[80vh] object-contain rounded-lg border border-[#E8E2D9]/20 shadow-2xl pointer-events-auto"
+                style={{ cursor: reviewLightboxZoom > 1 ? 'grab' : 'zoom-in' }}
+                onClick={() => {
+                  // Click image to toggle zoom
+                  if (reviewLightboxZoom === 1) {
+                    setReviewLightboxZoom(1.75);
+                  } else {
+                    setReviewLightboxZoom(1);
+                  }
+                }}
+              />
+            </div>
+          </div>
+          
+          {/* Footer usage tip */}
+          <div className="p-2.5 bg-[#2D2A26] text-center text-[9px] font-sans font-medium text-[#9A9184]/70 border-t border-[#E8E2D9]/5">
+            Tip: Use the zoom buttons, scroll/swipe, or click the image to toggle scale. Click backdrop to exit.
+          </div>
+        </div>
+      )}
+
       {/* Global Tab Navigation Footer */}
       <BottomNavBar
         currentView={currentView}
         onNavigate={handleNavigate}
+        isAdmin={store.user?.email === 'gonarengopi@gmail.com'}
       />
     </div>
   );

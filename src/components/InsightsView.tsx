@@ -96,8 +96,26 @@ export function InsightsView({
     return gridDays;
   }, [mistakes]);
 
-  // Months label list formatting
-  const monthsHeaders = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  // Find which weeks cross into a new month to write week labels in correct columns
+  const weekLabels = useMemo(() => {
+    const labels = [];
+    let prevMonth = '';
+    for (let i = 0; i < 52; i++) {
+      const firstDayOfWeek = fullYearHeatGrid[i * 7];
+      if (!firstDayOfWeek) {
+        labels.push('');
+        continue;
+      }
+      const currentMonth = firstDayOfWeek.month;
+      if (currentMonth !== prevMonth) {
+        labels.push(currentMonth);
+        prevMonth = currentMonth;
+      } else {
+        labels.push('');
+      }
+    }
+    return labels;
+  }, [fullYearHeatGrid]);
 
   return (
     <div className="space-y-8 animate-fade-in">
@@ -132,33 +150,45 @@ export function InsightsView({
 
             {/* Scrollable Container for Heatmap Contribution grid */}
             <div className="overflow-x-auto pb-2 scrollbar-none">
-              <div className="grid grid-rows-7 grid-flow-col gap-1.5 min-w-max">
-                {fullYearHeatGrid.map((day, idx) => {
-                  let bgColor = 'bg-stone-50 border border-gray-200/50 border-dashed';
-                  if (day.count === 1) bgColor = 'bg-[#E6E1FF]/40 border border-[#E6E1FF]/50';
-                  else if (day.count === 2) bgColor = 'bg-[#E6E1FF]/80';
-                  else if (day.count > 2) bgColor = 'bg-[#8c7df0]';
+              <div className="min-w-max flex flex-col">
+                <div className="grid grid-rows-7 grid-flow-col gap-1.5">
+                  {fullYearHeatGrid.map((day, idx) => {
+                    let bgColor = 'bg-stone-50 border border-gray-200/50 border-dashed';
+                    if (day.count === 1) bgColor = 'bg-[#E6E1FF]/40 border border-[#E6E1FF]/50';
+                    else if (day.count === 2) bgColor = 'bg-[#E6E1FF]/80';
+                    else if (day.count > 2) bgColor = 'bg-[#8c7df0]';
 
-                  return (
-                    <div
-                      key={idx}
-                      className={`w-3.5 h-3.5 rounded-sm transition-transform duration-150 hover:scale-125 cursor-pointer relative group ${bgColor}`}
-                    >
-                      {/* Tooltip */}
-                      <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2.5 py-1 bg-black text-white text-[9px] font-bold rounded opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity duration-150 z-20 whitespace-nowrap shadow-sm">
-                        {day.count} {day.count === 1 ? 'log' : 'logs'} on {day.month} {day.dayNum}
+                    return (
+                      <div
+                        key={idx}
+                        className={`w-3.5 h-3.5 rounded-sm transition-transform duration-150 hover:scale-125 cursor-pointer relative group ${bgColor}`}
+                      >
+                        {/* Tooltip */}
+                        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2.5 py-1 bg-black text-white text-[9px] font-bold rounded opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity duration-150 z-20 whitespace-nowrap shadow-sm">
+                          {day.count} {day.count === 1 ? 'log' : 'logs'} on {day.month} {day.dayNum}
+                        </div>
                       </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
+                    );
+                  })}
+                </div>
 
-            {/* Timeline label columns matching image structure */}
-            <div className="flex justify-between px-1 mt-3 font-sans text-[10px] font-bold text-gray-400 uppercase tracking-widest leading-none">
-              {monthsHeaders.map((m) => (
-                <span key={m}>{m}</span>
-              ))}
+                {/* Dynamic Month Labels aligned exactly to the week columns below the heatmap */}
+                <div className="relative h-4 mt-3 font-sans text-[10px] font-bold text-gray-400 uppercase tracking-widest leading-none">
+                  {weekLabels.map((label, colIdx) => {
+                    if (!label) return null;
+                    const leftOffset = colIdx * 20; // 14px (cell width) + 6px (gap) = 20px per week-column
+                    return (
+                      <span
+                        key={colIdx}
+                        className="absolute text-[10px] whitespace-nowrap"
+                        style={{ left: `${leftOffset}px` }}
+                      >
+                        {label}
+                      </span>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
           </div>
 

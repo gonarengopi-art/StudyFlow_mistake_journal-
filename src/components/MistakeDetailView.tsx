@@ -5,7 +5,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { Subject, Topic, Subtopic, MistakeEntry, MistakeCategory, ReviewStatus } from '../types';
-import { ChevronLeft, Share2, Eye, FileImage, Sparkles, PencilLine, Trash2, Calendar, BookOpen, AlertTriangle, CheckSquare, Save, X, Lightbulb, FileText, ArrowRight, Maximize2, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
+import { ChevronLeft, Share2, Eye, FileImage, Sparkles, PencilLine, Trash2, Calendar, BookOpen, AlertTriangle, CheckSquare, Save, X, Lightbulb, FileText, ArrowRight, Maximize2, ZoomIn, ZoomOut, RotateCcw, Camera, Upload } from 'lucide-react';
 
 interface MistakeDetailViewProps {
   mistakeId: string;
@@ -34,8 +34,104 @@ export function MistakeDetailView({
     return mistakes.find((m) => m.id === mistakeId);
   }, [mistakes, mistakeId]);
 
+  const viewingImages = useMemo(() => {
+    if (!mistake) return [];
+    return mistake.imageUrls && mistake.imageUrls.length > 0 
+      ? mistake.imageUrls 
+      : (mistake.imageUrl ? [mistake.imageUrl] : []);
+  }, [mistake]);
+
   // Is editing state
   const [isEditing, setIsEditing] = useState(false);
+
+  // Active image index
+  const [activeImageIndex, setActiveImageIndex] = useState(0);
+
+  // Edit-mode camera stream and utilities
+  const [editCameraActive, setEditCameraActive] = useState(false);
+  const [editCameraStream, setEditCameraStream] = useState<MediaStream | null>(null);
+  const editVideoRef = React.useRef<HTMLVideoElement | null>(null);
+
+  React.useEffect(() => {
+    return () => {
+      if (editCameraStream) {
+        editCameraStream.getTracks().forEach(track => track.stop());
+      }
+    };
+  }, [editCameraStream]);
+
+  const startEditCamera = async () => {
+    try {
+      setEditCameraActive(true);
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }
+      });
+      setEditCameraStream(stream);
+      setTimeout(() => {
+        if (editVideoRef.current) {
+          editVideoRef.current.srcObject = stream;
+          editVideoRef.current.play().catch(e => console.error("Error playing video:", e));
+        }
+      }, 120);
+    } catch (err) {
+      console.error("Camera access error:", err);
+      alert("Could not access camera. Please check your browser's site permissions for camera access.");
+      setEditCameraActive(false);
+    }
+  };
+
+  const stopEditCamera = () => {
+    if (editCameraStream) {
+      editCameraStream.getTracks().forEach(track => track.stop());
+      setEditCameraStream(null);
+    }
+    setEditCameraActive(false);
+  };
+
+  const addEditImage = (url: string) => {
+    setEditImageUrls(prev => {
+      if (prev.length >= 10) {
+        alert("Maximum of 10 photos can be added per mistake log.");
+        return prev;
+      }
+      return [...prev, url];
+    });
+  };
+
+  const captureEditPhoto = () => {
+    if (editVideoRef.current) {
+      const video = editVideoRef.current;
+      const canvas = document.createElement('canvas');
+      canvas.width = video.videoWidth || 640;
+      canvas.height = video.videoHeight || 480;
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const dataUrl = canvas.toDataURL('image/jpeg');
+        addEditImage(dataUrl);
+      }
+      stopEditCamera();
+    }
+  };
+
+  const handleEditFileReader = (file: File) => {
+    if (!file.type.startsWith('image/')) {
+      alert('Please upload an image file (PNG, JPG, BMP, WEBP, etc.).');
+      return;
+    }
+    if (file.size > 2.5 * 1024 * 1024) {
+      alert('This image exceeds 2.5MB. Please upload a smaller image.');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const result = e.target?.result;
+      if (typeof result === 'string') {
+        addEditImage(result);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
 
   // Fullscreen image light box state
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -50,6 +146,7 @@ export function MistakeDetailView({
   
   // Image links
   const [editImageUrl, setEditImageUrl] = useState('');
+  const [editImageUrls, setEditImageUrls] = useState<string[]>([]);
 
   // Learnings
   const [editOriginalQuestion, setEditOriginalQuestion] = useState('');
@@ -60,7 +157,6 @@ export function MistakeDetailView({
 
   // Reflection and Advice
   const [editReflection, setEditReflection] = useState('');
-  const [editFutureAdvice, setEditFutureAdvice] = useState('');
 
   // Status & Tags
   const [editStatus, setEditStatus] = useState<ReviewStatus>('New');
@@ -87,6 +183,7 @@ export function MistakeDetailView({
     setEditSubtopicId(mistake.subtopicId || '');
     setEditDate(mistake.dateLogged);
     setEditImageUrl(mistake.imageUrl || '');
+    setEditImageUrls(mistake.imageUrls || (mistake.imageUrl ? [mistake.imageUrl] : []));
     
     setEditOriginalQuestion(mistake.originalQuestion);
     setEditMyAnswer(mistake.myAnswer || '');
@@ -95,7 +192,6 @@ export function MistakeDetailView({
     setEditCorrectExplanation(mistake.correctExplanation || '');
 
     setEditReflection(mistake.reflection);
-    setEditFutureAdvice(mistake.futureAdvice);
     setEditStatus(mistake.status);
     setEditCategories([...mistake.categories]);
 
@@ -123,7 +219,8 @@ export function MistakeDetailView({
       topicId: editTopicId,
       subtopicId: editSubtopicId || undefined,
       dateLogged: editDate,
-      imageUrl: editImageUrl ? editImageUrl.trim() : undefined,
+      imageUrl: editImageUrls[0] ? editImageUrls[0] : undefined,
+      imageUrls: editImageUrls.length > 0 ? editImageUrls : undefined,
       
       originalQuestion: editOriginalQuestion.trim(),
       myAnswer: editMyAnswer.trim(),
@@ -132,7 +229,7 @@ export function MistakeDetailView({
       correctExplanation: editCorrectExplanation.trim(),
 
       reflection: editReflection.trim(),
-      futureAdvice: editFutureAdvice.trim(),
+      futureAdvice: '',
       status: editStatus,
       categories: editCategories,
     });
@@ -394,27 +491,16 @@ export function MistakeDetailView({
                 </div>
               </div>
 
-              {/* Reflection and advice */}
-              <div className="border-t border-[#E8E2D9] pt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* Reflection */}
+              <div className="border-t border-[#E8E2D9] pt-4">
                 <div>
-                  <label className="block text-[10px] font-bold text-[#C17A5E] uppercase tracking-widest mb-1">Reflection ("What did I misunderstand?")</label>
+                  <label className="block text-[10px] font-bold text-[#C17A5E] uppercase tracking-widest mb-1 font-sans">Reflection & Understanding <span className="text-[#D98A6C]">*</span></label>
                   <textarea
                     rows={4}
                     value={editReflection}
                     onChange={(e) => setEditReflection(e.target.value)}
-                    className="w-full text-xs p-2.5 border border-[#E8E2D9] rounded-xl bg-[#FDFCF8] text-[#2D2A26]"
-                    placeholder="Briefly analyze why you fell into this trap..."
-                    required
-                  ></textarea>
-                </div>
-                <div>
-                  <label className="block text-[10px] font-bold text-[#5A5A40] uppercase tracking-widest mb-1">Advice Note ("What should I remember next time?")</label>
-                  <textarea
-                    rows={4}
-                    value={editFutureAdvice}
-                    onChange={(e) => setEditFutureAdvice(e.target.value)}
-                    className="w-full text-xs p-2.5 border border-[#8DA38A] rounded-xl bg-[#F5F2ED] text-[#2D2A26]"
-                    placeholder="A key visual warning for your future self..."
+                    className="w-full text-xs p-3 border border-[#E8E2D9] rounded-xl bg-[#FDFCF8] text-[#2D2A26] outline-none focus:border-[#C17A5E] font-sans"
+                    placeholder="Briefly analyze why you fell into this trap, how you resolved it, and what conceptual understanding was corrected..."
                     required
                   ></textarea>
                 </div>
@@ -444,17 +530,104 @@ export function MistakeDetailView({
                 </div>
               </div>
 
-              {/* Image capture url */}
-              <div className="bg-[#F5F2ED] p-4 rounded-xl border border-[#E8E2D9] space-y-2">
-                <label className="block text-[10px] font-bold text-[#5A5A40] uppercase tracking-widest mb-1">Question Image URL (Hotlink)</label>
-                <input
-                  type="text"
-                  placeholder="e.g. https://unsp...img.jpg"
-                  value={editImageUrl}
-                  onChange={(e) => setEditImageUrl(e.target.value)}
-                  className="w-full text-xs p-2 border border-[#E8E2D9] bg-white text-[#2D2A26] rounded-lg outline-none focus:border-[#5A5A40]"
-                />
-                <span className="text-[9px] text-[#6B6357] block leading-tight">Optional. Paste a direct link to any math, diagram, or homework equation picture.</span>
+              {/* Image capture url and multiple upload manager */}
+              <div className="bg-[#F5F2ED] p-4 rounded-xl border border-[#E8E2D9] space-y-3 font-sans">
+                <label className="block text-[10px] font-bold text-[#5A5A40] uppercase tracking-widest">Question Photos & Reference Screenshots</label>
+                
+                {/* Photo grid */}
+                {editImageUrls.length > 0 && (
+                  <div className="grid grid-cols-2 gap-2 max-h-[140px] overflow-y-auto p-1 border border-[#E8E2D9] rounded-lg bg-white">
+                    {editImageUrls.map((url, index) => (
+                      <div key={index} className="relative aspect-video rounded overflow-hidden border border-stone-200 group shadow-xs">
+                        <img src={url} className="w-full h-full object-cover" alt="" referrerPolicy="no-referrer" />
+                        <div className="absolute inset-x-0 bottom-0 bg-black/60 text-[8px] text-white py-0.5 text-center font-semibold">
+                          Photo {index + 1} {index === 0 && "(Primary)"}
+                        </div>
+                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                          <button
+                            type="button"
+                            onClick={() => setEditImageUrls(prev => prev.filter((_, idx) => idx !== index))}
+                            className="p-1 bg-red-600 hover:bg-red-700 text-white rounded transition-colors shadow-sm cursor-pointer"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Camera block */}
+                {editCameraActive ? (
+                  <div className="flex flex-col items-center justify-center bg-stone-900 rounded-lg p-2 relative overflow-hidden border border-[#E8E2D9]">
+                    <video 
+                      ref={editVideoRef}
+                      autoPlay 
+                      playsInline 
+                      muted
+                      className="w-full aspect-video rounded-md bg-black object-cover"
+                    />
+                    <div className="flex gap-2.5 mt-2">
+                      <button
+                        type="button"
+                        onClick={captureEditPhoto}
+                        className="px-2.5 py-1 bg-[#5A5A40] hover:bg-[#474732] text-white rounded text-[10px] font-bold shadow-md cursor-pointer transition-colors"
+                      >
+                        Capture
+                      </button>
+                      <button
+                        type="button"
+                        onClick={stopEditCamera}
+                        className="px-2.5 py-1 bg-stone-700 hover:bg-stone-800 text-white rounded text-[10px] font-bold shadow-md cursor-pointer transition-colors"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex gap-2">
+                    <label className="flex-1 cursor-pointer flex items-center justify-center gap-1.5 py-1.5 px-2 border border-stone-200 hover:border-stone-400 bg-white hover:bg-stone-50 rounded-lg transition-all shadow-xs text-center">
+                      <Upload className="w-3.5 h-3.5 text-[#5A5A40]" />
+                      <span className="text-[10px] font-bold text-[#2D2A26]">Upload File</span>
+                      <input 
+                        type="file" 
+                        accept="image/*" 
+                        onChange={(e) => {
+                          if (e.target.files && e.target.files[0]) {
+                            handleEditFileReader(e.target.files[0]);
+                          }
+                        }} 
+                        className="hidden" 
+                      />
+                    </label>
+                    <button
+                      type="button"
+                      onClick={startEditCamera}
+                      className="flex-1 cursor-pointer flex items-center justify-center gap-1.5 py-1.5 px-2 border border-stone-200 hover:border-stone-400 bg-white hover:bg-stone-50 rounded-lg transition-all shadow-xs text-center font-bold text-[#2D2A26] text-[10px]"
+                    >
+                      <Camera className="w-3.5 h-3.5 text-[#5A5A40]" />
+                      <span>Take Photo</span>
+                    </button>
+                  </div>
+                )}
+
+                {/* URL hotlink alternate input */}
+                <div className="space-y-1">
+                  <span className="text-[9px] text-[#5A5A40] font-bold uppercase tracking-wider block">Or Paste Link (Alternate URL):</span>
+                  <input
+                    type="text"
+                    placeholder="e.g. https://domain.com/screenshot.jpg"
+                    value={editImageUrl}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setEditImageUrl(val);
+                      if (val.trim() && !editImageUrls.includes(val.trim())) {
+                        addEditImage(val.trim());
+                      }
+                    }}
+                    className="w-full text-xs p-1.5 border border-[#E8E2D9] bg-white text-[#2D2A26] rounded-lg outline-none focus:border-[#5A5A40]"
+                  />
+                </div>
               </div>
 
               {/* Multi-select Tags Checkbox Group */}
@@ -548,27 +721,49 @@ export function MistakeDetailView({
                 </h3>
 
                 {/* Picture Image representation matched with Quantum equations from chalk template direct */}
-                {mistake.imageUrl && (
-                  <div 
-                    onClick={() => {
-                      setIsFullscreen(true);
-                      setZoomScale(1);
-                    }}
-                    className="aspect-video w-full rounded-xl bg-stone-950 flex items-center justify-center overflow-hidden mb-4 relative group shadow-inner cursor-pointer"
-                  >
-                    <img
-                      src={mistake.imageUrl}
-                      alt="equations"
-                      className="w-full h-full object-cover opacity-80 group-hover:scale-105 transition-transform duration-700 border border-black/10"
-                    />
-                    <div className="absolute inset-0 bg-black/20 group-hover:bg-black/40 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100 duration-300">
-                      <span className="bg-[#2D2A26]/90 text-[#FDFCF8] px-4 py-2 rounded-full font-sans text-xs font-bold flex items-center gap-1.5 shadow-lg border border-[#E8E2D9]/20 transform translate-y-2 group-hover:translate-y-0 transition-all duration-300">
-                        <Maximize2 className="w-4 h-4 text-[#D98A6C]" /> View Fullscreen
-                      </span>
+                {viewingImages.length > 0 && (
+                  <div className="space-y-3 mb-5 select-none">
+                    <div 
+                      onClick={() => {
+                        setIsFullscreen(true);
+                        setZoomScale(1);
+                      }}
+                      className="aspect-video w-full rounded-xl bg-stone-950 flex items-center justify-center overflow-hidden relative group shadow-inner cursor-pointer"
+                    >
+                      <img
+                        src={viewingImages[activeImageIndex] || viewingImages[0]}
+                        alt="equations"
+                        className="w-full h-full object-cover opacity-85 group-hover:scale-105 transition-transform duration-700 border border-black/10"
+                      />
+                      <div className="absolute inset-0 bg-black/20 group-hover:bg-black/40 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100 duration-300">
+                        <span className="bg-[#2D2A26]/90 text-[#FDFCF8] px-4 py-2 rounded-full font-sans text-xs font-bold flex items-center gap-1.5 shadow-lg border border-[#E8E2D9]/20 transform translate-y-2 group-hover:translate-y-0 transition-all duration-300">
+                          <Maximize2 className="w-4 h-4 text-[#D98A6C]" /> View Fullscreen
+                        </span>
+                      </div>
+                      <div className="absolute bottom-3 left-3 bg-white/95 backdrop-blur-sm px-3.5 py-1.5 rounded-full font-sans text-[10px] font-bold text-[#2D2A26] border border-[#E8E2D9]">
+                        Photo {activeImageIndex + 1} of {viewingImages.length}
+                      </div>
                     </div>
-                    <div className="absolute bottom-3 left-3 bg-white/95 backdrop-blur-sm px-3.5 py-1.5 rounded-full font-sans text-[10px] font-bold text-[#2D2A26] border border-[#E8E2D9]">
-                      Captured reference image
-                    </div>
+
+                    {/* Thumbnails indicator bar if there are multiple photos */}
+                    {viewingImages.length > 1 && (
+                      <div className="flex gap-2.5 overflow-x-auto py-1 scrollbar-none">
+                        {viewingImages.map((imgUrl, index) => (
+                          <button
+                            key={index}
+                            type="button"
+                            onClick={() => setActiveImageIndex(index)}
+                            className={`relative w-14 h-14 rounded-lg overflow-hidden border-2 transition-all flex-shrink-0 cursor-pointer ${
+                              index === activeImageIndex 
+                                ? "border-[#5A5A40] scale-102 ring-1 ring-[#5A5A40]/30" 
+                                : "border-[#E8E2D9] opacity-60 hover:opacity-100"
+                            }`}
+                          >
+                            <img src={imgUrl} className="w-full h-full object-cover" alt={`Thumbnail ${index + 1}`} />
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -627,33 +822,19 @@ export function MistakeDetailView({
                   "{mistake.reflection}"
                 </p>
 
-                {/* Tags list */}
-                <div className="flex flex-wrap gap-1.5 pt-2 border-t border-[#E8E2D9]">
-                  {mistake.categories.map((cat) => (
-                    <span key={cat} className="px-3 py-1 bg-[#E8E2D9] text-[#4A453E] border border-[#E8E2D9] rounded-full font-sans text-[9px] font-bold uppercase tracking-tight">
-                      {cat}
-                    </span>
-                  ))}
-                </div>
-              </div>
-
-              {/* Card 4: Future Self Advice on Warm Neutral Background */}
-              <div className="bg-[#F5F2ED] border border-[#E8E2D9] rounded-2xl p-6 shadow-sm relative overflow-hidden group">
-                <div className="absolute -right-4 -top-4 w-24 h-24 bg-[#8DA38A]/10 rounded-full blur-2xl pointer-events-none group-hover:scale-150 transition-transform duration-1000"></div>
-                
-                <h3 className="font-serif text-base font-bold text-[#2D2A26] flex items-center gap-2 mb-3 relative z-10">
-                  <Sparkles className="w-4.5 h-4.5 text-[#5A5A40]" />
-                  Future Self Advice
-                </h3>
-
-                {/* Custom scribble script italic look */}
-                <div className="font-serif italic text-lg text-[#2D2A26] mb-5 relative z-10 font-semibold leading-relaxed">
-                  "{mistake.futureAdvice}"
-                </div>
-
-                <div className="flex items-center gap-1.5 text-[#6B6357] text-[10px] font-sans font-medium relative z-10 border-t border-[#E8E2D9]/80 pt-2">
-                  <Calendar className="w-3.5 h-3.5 opacity-60 text-[#5A5A40]" />
-                  <span>Logged {mistake.dateLogged} by Julian</span>
+                {/* Tags list and Logged date */}
+                <div className="space-y-3 pt-2 border-t border-[#E8E2D9]">
+                  <div className="flex flex-wrap gap-1.5 font-sans">
+                    {mistake.categories.map((cat) => (
+                      <span key={cat} className="px-3 py-1 bg-[#E8E2D9] text-[#4A453E] border border-[#E8E2D9] rounded-full text-[9px] font-bold uppercase tracking-tight">
+                        {cat}
+                      </span>
+                    ))}
+                  </div>
+                  <div className="flex items-center gap-1.5 text-[#6B6357] text-[10px] font-sans font-medium pt-1 border-t border-stone-100">
+                    <Calendar className="w-3.5 h-3.5 opacity-60 text-[#5A5A40]" />
+                    <span>Logged {mistake.dateLogged} by Julian</span>
+                  </div>
                 </div>
               </div>
 
@@ -739,13 +920,13 @@ export function MistakeDetailView({
         </div>
       )}
 
-      {isFullscreen && mistake?.imageUrl && (
+      {isFullscreen && viewingImages.length > 0 && (
         <div className="fixed inset-0 bg-[#2D2A26]/95 backdrop-blur-md flex flex-col z-50 select-none animate-fade-in">
           {/* Header toolbar */}
           <div className="flex items-center justify-between p-4 bg-[#2D2A26]/80 border-b border-[#E8E2D9]/10 text-white font-sans">
             <div className="flex flex-col text-left">
               <span className="text-[9px] font-bold uppercase tracking-widest text-[#D98A6C]">Fullscreen Mode</span>
-              <h4 className="text-xs font-serif font-bold text-[#FDFCF8] max-w-[200px] md:max-w-md line-clamp-1">{mistake.title}</h4>
+              <h4 className="text-xs font-serif font-bold text-[#FDFCF8] max-w-[200px] md:max-w-md line-clamp-1">{mistake?.title}</h4>
             </div>
             
             {/* Control buttons */}
@@ -802,8 +983,8 @@ export function MistakeDetailView({
               onClick={(e) => e.stopPropagation()}
             >
               <img
-                src={mistake.imageUrl}
-                alt={mistake.title}
+                src={viewingImages[activeImageIndex] || viewingImages[0]}
+                alt={mistake?.title}
                 className="max-h-[75vh] max-w-full md:max-h-[80vh] object-contain rounded-lg border border-[#E8E2D9]/20 shadow-2xl pointer-events-auto"
                 style={{ cursor: zoomScale > 1 ? 'grab' : 'zoom-in' }}
                 onClick={() => {

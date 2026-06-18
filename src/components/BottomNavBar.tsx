@@ -4,16 +4,17 @@
  */
 
 import React from 'react';
-import { Layout, FolderClosed, PlusCircle, BarChart3, UserCircle } from 'lucide-react';
+import { Layout, FolderClosed, PlusCircle, BarChart3, UserCircle, ShieldCheck } from 'lucide-react';
 
-export type ViewTab = 'dashboard' | 'topics' | 'add' | 'insights' | 'profile';
+export type ViewTab = 'dashboard' | 'topics' | 'add' | 'insights' | 'profile' | 'admin';
 
 interface BottomNavBarProps {
   currentView: ViewTab;
   onNavigate: (view: ViewTab) => void;
+  isAdmin?: boolean;
 }
 
-export function BottomNavBar({ currentView, onNavigate }: BottomNavBarProps) {
+export function BottomNavBar({ currentView, onNavigate, isAdmin }: BottomNavBarProps) {
   const tabs = [
     { id: 'dashboard' as ViewTab, label: 'Dashboard', icon: Layout },
     { id: 'topics' as ViewTab, label: 'Topics', icon: FolderClosed },
@@ -21,6 +22,10 @@ export function BottomNavBar({ currentView, onNavigate }: BottomNavBarProps) {
     { id: 'insights' as ViewTab, label: 'Insights', icon: BarChart3 },
     { id: 'profile' as ViewTab, label: 'Profile', icon: UserCircle },
   ];
+
+  if (isAdmin) {
+    tabs.push({ id: 'admin' as ViewTab, label: 'Admin', icon: ShieldCheck });
+  }
 
   return (
     <nav className="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 pb-4 pt-2 bg-white/95 backdrop-blur-md shadow-lg rounded-t-2xl border-t border-[#E8E2D9] max-w-7xl mx-auto left-1/2 -translate-x-1/2">

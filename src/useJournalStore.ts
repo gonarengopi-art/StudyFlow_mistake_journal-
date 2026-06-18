@@ -17,6 +17,7 @@ import {
   collection, 
   doc, 
   setDoc, 
+  getDoc,
   deleteDoc, 
   onSnapshot, 
   query, 
@@ -50,6 +51,8 @@ export interface FirestoreErrorInfo {
   }
 }
 
+let globalQuotaListener: ((exceeded: boolean, msg: string) => void) | null = null;
+
 function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
   const errInfo: FirestoreErrorInfo = {
     error: error instanceof Error ? error.message : String(error),
@@ -68,6 +71,18 @@ function handleFirestoreError(error: unknown, operationType: OperationType, path
     path
   };
   console.error('Firestore Error: ', JSON.stringify(errInfo));
+
+  const errorMessageText = errInfo.error;
+  if (
+    errorMessageText.toLowerCase().includes('quota') ||
+    errorMessageText.toLowerCase().includes('quota limit') ||
+    errorMessageText.toLowerCase().includes('limit exceeded')
+  ) {
+    if (globalQuotaListener) {
+      globalQuotaListener(true, errorMessageText);
+    }
+  }
+
   throw new Error(JSON.stringify(errInfo));
 }
 
@@ -88,6 +103,129 @@ export function useJournalStore() {
   const [subtopics, setSubtopics] = useState<Subtopic[]>([]);
   const [mistakes, setMistakes] = useState<MistakeEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [userDocData, setUserDocData] = useState<any | null>(null);
+  const [quotaExceeded, setQuotaExceeded] = useState(false);
+  const [quotaErrorMessage, setQuotaErrorMessage] = useState<string | null>(null);
+
+  // New Quota states
+  const [quotaReads, setQuotaReads] = useState<number>(0);
+
+  const getTodayStr = () => {
+    return new Date().toISOString().split('T')[0];
+  };
+
+  const getLocalQuotaReads = (uid: string) => {
+    const today = getTodayStr();
+    try {
+      const cached = localStorage.getItem(`studyflow_quota_${uid}`);
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (parsed.date === today) {
+          return parsed.reads || 0;
+        }
+      }
+    } catch (e) {
+      console.error(e);
+    }
+    return 0;
+  };
+
+  const saveLocalQuotaReads = (uid: string, reads: number) => {
+    const today = getTodayStr();
+    try {
+      localStorage.setItem(`studyflow_quota_${uid}`, JSON.stringify({ date: today, reads }));
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const recordReads = (count: number, syncToFirebase: boolean = true) => {
+    if (!user || count <= 0) return;
+    const today = getTodayStr();
+    const currentLocal = getLocalQuotaReads(user.uid);
+    const newReads = currentLocal + count;
+    
+    saveLocalQuotaReads(user.uid, newReads);
+    setQuotaReads(newReads);
+
+    if (syncToFirebase && user.email !== 'gonarengopi@gmail.com') {
+      const userRef = doc(db, 'users', user.uid);
+      setDoc(userRef, {
+        dailyQuotaReads: newReads,
+        dailyQuotaDate: today
+      }, { merge: true }).catch((err) => {
+        console.warn("Could not sync reads to Firestore: ", err);
+      });
+    }
+  };
+
+  const isAdmin = user?.email === 'gonarengopi@gmail.com';
+  const quotaLimit = userDocData?.dailyQuotaLimit !== undefined ? userDocData.dailyQuotaLimit : 1000;
+  const isQuotaExceeded = !isAdmin && quotaReads >= quotaLimit;
+
+  // Admin-specific state for global quota monitoring
+  const [allUsers, setAllUsers] = useState<any[]>([]);
+
+  // Subscribe to all users in real-time ONLY if authenticated and is admin
+  useEffect(() => {
+    if (!user || user.email !== 'gonarengopi@gmail.com') {
+      setAllUsers([]);
+      return;
+    }
+
+    const unsub = onSnapshot(
+      collection(db, 'users'),
+      (snapshot) => {
+        const list: any[] = [];
+        snapshot.forEach((doc) => {
+          list.push({ id: doc.id, ...doc.data() });
+        });
+        setAllUsers(list);
+      },
+      (err) => {
+        console.warn("Could not load users for admin in store:", err);
+      }
+    );
+
+    return unsub;
+  }, [user]);
+
+  const totalLiveReadsToday = (() => {
+    const today = getTodayStr();
+    return allUsers.reduce((sum, u) => {
+      if (u.dailyQuotaDate === today) {
+        return sum + (u.dailyQuotaReads || 0);
+      }
+      return sum;
+    }, 0);
+  })();
+
+  // Initialize/sync quota reads strictly on authentication
+  useEffect(() => {
+    if (!user) {
+      setQuotaReads(0);
+      return;
+    }
+    setQuotaReads(getLocalQuotaReads(user.uid));
+  }, [user]);
+
+  useEffect(() => {
+    globalQuotaListener = (exceeded, msg) => {
+      setQuotaExceeded(exceeded);
+      setQuotaErrorMessage(msg);
+      setLoading(false);
+    };
+    return () => {
+      globalQuotaListener = null;
+    };
+  }, []);
+
+  // Reset user doc data when auth state becomes null
+  useEffect(() => {
+    if (!user) {
+      setUserDocData(null);
+    }
+  }, [user]);
 
   // Validate connection on boot as per skill
   useEffect(() => {
@@ -143,6 +281,38 @@ export function useJournalStore() {
     // Remote sync mode
     setLoading(true);
 
+    const unsubUser = onSnapshot(
+      doc(db, 'users', user.uid),
+      (snapshot) => {
+        if (snapshot.exists()) {
+          const data = snapshot.data();
+          setUserDocData(data);
+          localStorage.setItem(`studyflow_user_${user.uid}`, JSON.stringify(data));
+          
+          const today = getTodayStr();
+          if (data.dailyQuotaDate === today && typeof data.dailyQuotaReads === 'number') {
+            const localReads = getLocalQuotaReads(user.uid);
+            if (data.dailyQuotaReads > localReads) {
+              saveLocalQuotaReads(user.uid, data.dailyQuotaReads);
+              setQuotaReads(data.dailyQuotaReads);
+            }
+          }
+        } else {
+          setUserDocData(null);
+        }
+        recordReads(1, false); // Record locally, no server sync to prevent loops
+      },
+      (error) => {
+        try {
+          const cached = localStorage.getItem(`studyflow_user_${user.uid}`);
+          if (cached) setUserDocData(JSON.parse(cached));
+        } catch (e) {
+          console.error('Failed to load cached user', e);
+        }
+        handleFirestoreError(error, OperationType.GET, `users/${user.uid}`);
+      }
+    );
+
     const unsubSubjects = onSnapshot(
       query(collection(db, 'subjects'), where('userId', '==', user.uid)),
       (snapshot) => {
@@ -151,9 +321,20 @@ export function useJournalStore() {
           items.push(doc.data() as Subject);
         });
         setSubjects(items);
+        localStorage.setItem(`studyflow_subjects_${user.uid}`, JSON.stringify(items));
         setLoading(false);
+        recordReads(snapshot.size);
       },
-      (error) => handleFirestoreError(error, OperationType.LIST, 'subjects')
+      (error) => {
+        try {
+          const cached = localStorage.getItem(`studyflow_subjects_${user.uid}`);
+          if (cached) setSubjects(JSON.parse(cached));
+        } catch (e) {
+          console.error('Failed to load cached subjects', e);
+        }
+        setLoading(false);
+        handleFirestoreError(error, OperationType.LIST, 'subjects');
+      }
     );
 
     const unsubTopics = onSnapshot(
@@ -164,8 +345,19 @@ export function useJournalStore() {
           items.push(doc.data() as Topic);
         });
         setTopics(items);
+        localStorage.setItem(`studyflow_topics_${user.uid}`, JSON.stringify(items));
+        recordReads(snapshot.size);
       },
-      (error) => handleFirestoreError(error, OperationType.LIST, 'topics')
+      (error) => {
+        try {
+          const cached = localStorage.getItem(`studyflow_topics_${user.uid}`);
+          if (cached) setTopics(JSON.parse(cached));
+        } catch (e) {
+          console.error('Failed to load cached topics', e);
+        }
+        setLoading(false);
+        handleFirestoreError(error, OperationType.LIST, 'topics');
+      }
     );
 
     const unsubSubtopics = onSnapshot(
@@ -176,8 +368,19 @@ export function useJournalStore() {
           items.push(doc.data() as Subtopic);
         });
         setSubtopics(items);
+        localStorage.setItem(`studyflow_subtopics_${user.uid}`, JSON.stringify(items));
+        recordReads(snapshot.size);
       },
-      (error) => handleFirestoreError(error, OperationType.LIST, 'subtopics')
+      (error) => {
+        try {
+          const cached = localStorage.getItem(`studyflow_subtopics_${user.uid}`);
+          if (cached) setSubtopics(JSON.parse(cached));
+        } catch (e) {
+          console.error('Failed to load cached subtopics', e);
+        }
+        setLoading(false);
+        handleFirestoreError(error, OperationType.LIST, 'subtopics');
+      }
     );
 
     const unsubMistakes = onSnapshot(
@@ -188,16 +391,69 @@ export function useJournalStore() {
           items.push(doc.data() as MistakeEntry);
         });
         setMistakes(items);
+        localStorage.setItem(`studyflow_mistakes_${user.uid}`, JSON.stringify(items));
+        recordReads(snapshot.size);
       },
-      (error) => handleFirestoreError(error, OperationType.LIST, 'mistakes')
+      (error) => {
+        try {
+          const cached = localStorage.getItem(`studyflow_mistakes_${user.uid}`);
+          if (cached) setMistakes(JSON.parse(cached));
+        } catch (e) {
+          console.error('Failed to load cached mistakes', e);
+        }
+        setLoading(false);
+        handleFirestoreError(error, OperationType.LIST, 'mistakes');
+      }
     );
 
     return () => {
+      unsubUser();
       unsubSubjects();
       unsubTopics();
       unsubSubtopics();
       unsubMistakes();
     };
+  }, [user]);
+
+  // Track / Register user session in public users collection to allow admin analytics
+  useEffect(() => {
+    if (!user) return;
+
+    const trackUserSession = async () => {
+      try {
+        const userRef = doc(db, 'users', user.uid);
+        const userSnap = await getDoc(userRef).catch(() => null);
+        const nowIso = new Date().toISOString();
+
+        if (userSnap && userSnap.exists()) {
+          const existingData = userSnap.data();
+          const joinedAtVal = existingData?.joinedAt || nowIso;
+          // Update last active, do not overwrite joinedAt
+          await setDoc(userRef, {
+            uid: user.uid,
+            email: user.email || '',
+            displayName: user.displayName || 'Anonymous Student',
+            photoURL: user.photoURL || '',
+            joinedAt: joinedAtVal,
+            lastActive: nowIso
+          }, { merge: true });
+        } else {
+          // Initialize fresh user entry
+          await setDoc(userRef, {
+            uid: user.uid,
+            email: user.email || '',
+            displayName: user.displayName || 'Anonymous Student',
+            photoURL: user.photoURL || '',
+            joinedAt: nowIso,
+            lastActive: nowIso
+          });
+        }
+      } catch (err) {
+        console.warn("Could not write user tracking doc: ", err);
+      }
+    };
+
+    trackUserSession();
   }, [user]);
 
   // Google Sign In
@@ -229,7 +485,7 @@ export function useJournalStore() {
     const newId = `sb-${Date.now()}`;
     const newSubject: Subject = { id: newId, name };
     
-    if (user) {
+    if (user && !isQuotaExceeded) {
       try {
         await setDoc(doc(db, 'subjects', newId), cleanUndefined({ ...newSubject, userId: user.uid }));
       } catch (error) {
@@ -238,13 +494,13 @@ export function useJournalStore() {
     } else {
       const newSubjects = [...subjects, newSubject];
       setSubjects(newSubjects);
-      localStorage.setItem('studyflow_subjects', JSON.stringify(newSubjects));
+      localStorage.setItem(user ? `studyflow_subjects_${user.uid}` : 'studyflow_subjects', JSON.stringify(newSubjects));
     }
     return newId;
   };
 
   const editSubject = async (id: string, name: string) => {
-    if (user) {
+    if (user && !isQuotaExceeded) {
       try {
         await setDoc(doc(db, 'subjects', id), cleanUndefined({ id, name, userId: user.uid }));
       } catch (error) {
@@ -253,12 +509,12 @@ export function useJournalStore() {
     } else {
       const newSubjects = subjects.map((s) => (s.id === id ? { ...s, name } : s));
       setSubjects(newSubjects);
-      localStorage.setItem('studyflow_subjects', JSON.stringify(newSubjects));
+      localStorage.setItem(user ? `studyflow_subjects_${user.uid}` : 'studyflow_subjects', JSON.stringify(newSubjects));
     }
   };
 
   const deleteSubject = async (id: string) => {
-    if (user) {
+    if (user && !isQuotaExceeded) {
       try {
         await deleteDoc(doc(db, 'subjects', id));
         
@@ -295,10 +551,11 @@ export function useJournalStore() {
       setSubtopics(newSubtopics);
       setMistakes(newMistakes);
 
-      localStorage.setItem('studyflow_subjects', JSON.stringify(newSubjects));
-      localStorage.setItem('studyflow_topics', JSON.stringify(newTopics));
-      localStorage.setItem('studyflow_subtopics', JSON.stringify(newSubtopics));
-      localStorage.setItem('studyflow_mistakes', JSON.stringify(newMistakes));
+      const keyPref = user ? `_${user.uid}` : '';
+      localStorage.setItem(`studyflow_subjects${keyPref}`, JSON.stringify(newSubjects));
+      localStorage.setItem(`studyflow_topics${keyPref}`, JSON.stringify(newTopics));
+      localStorage.setItem(`studyflow_subtopics${keyPref}`, JSON.stringify(newSubtopics));
+      localStorage.setItem(`studyflow_mistakes${keyPref}`, JSON.stringify(newMistakes));
     }
   };
 
@@ -307,7 +564,7 @@ export function useJournalStore() {
     const newId = `tp-${Date.now()}`;
     const newTopic: Topic = { id: newId, subjectId, name };
 
-    if (user) {
+    if (user && !isQuotaExceeded) {
       try {
         await setDoc(doc(db, 'topics', newId), cleanUndefined({ ...newTopic, userId: user.uid }));
       } catch (error) {
@@ -316,13 +573,13 @@ export function useJournalStore() {
     } else {
       const newTopics = [...topics, newTopic];
       setTopics(newTopics);
-      localStorage.setItem('studyflow_topics', JSON.stringify(newTopics));
+      localStorage.setItem(user ? `studyflow_topics_${user.uid}` : 'studyflow_topics', JSON.stringify(newTopics));
     }
     return newId;
   };
 
   const editTopic = async (id: string, name: string) => {
-    if (user) {
+    if (user && !isQuotaExceeded) {
       try {
         const existingTopic = topics.find((t) => t.id === id);
         if (existingTopic) {
@@ -339,12 +596,12 @@ export function useJournalStore() {
     } else {
       const newTopics = topics.map((t) => (t.id === id ? { ...t, name } : t));
       setTopics(newTopics);
-      localStorage.setItem('studyflow_topics', JSON.stringify(newTopics));
+      localStorage.setItem(user ? `studyflow_topics_${user.uid}` : 'studyflow_topics', JSON.stringify(newTopics));
     }
   };
 
   const deleteTopic = async (id: string) => {
-    if (user) {
+    if (user && !isQuotaExceeded) {
       try {
         await deleteDoc(doc(db, 'topics', id));
 
@@ -369,9 +626,10 @@ export function useJournalStore() {
       setSubtopics(newSubtopics);
       setMistakes(newMistakes);
 
-      localStorage.setItem('studyflow_topics', JSON.stringify(newTopics));
-      localStorage.setItem('studyflow_subtopics', JSON.stringify(newSubtopics));
-      localStorage.setItem('studyflow_mistakes', JSON.stringify(newMistakes));
+      const keyPref = user ? `_${user.uid}` : '';
+      localStorage.setItem(`studyflow_topics${keyPref}`, JSON.stringify(newTopics));
+      localStorage.setItem(`studyflow_subtopics${keyPref}`, JSON.stringify(newSubtopics));
+      localStorage.setItem(`studyflow_mistakes${keyPref}`, JSON.stringify(newMistakes));
     }
   };
 
@@ -380,7 +638,7 @@ export function useJournalStore() {
     const newId = `sbt-${Date.now()}`;
     const newSub: Subtopic = { id: newId, topicId, name };
 
-    if (user) {
+    if (user && !isQuotaExceeded) {
       try {
         await setDoc(doc(db, 'subtopics', newId), cleanUndefined({ ...newSub, userId: user.uid }));
       } catch (error) {
@@ -389,13 +647,13 @@ export function useJournalStore() {
     } else {
       const newSubtopics = [...subtopics, newSub];
       setSubtopics(newSubtopics);
-      localStorage.setItem('studyflow_subtopics', JSON.stringify(newSubtopics));
+      localStorage.setItem(user ? `studyflow_subtopics_${user.uid}` : 'studyflow_subtopics', JSON.stringify(newSubtopics));
     }
     return newId;
   };
 
   const editSubtopic = async (id: string, name: string) => {
-    if (user) {
+    if (user && !isQuotaExceeded) {
       try {
         const existingSub = subtopics.find((s) => s.id === id);
         if (existingSub) {
@@ -412,12 +670,12 @@ export function useJournalStore() {
     } else {
       const newSubtopics = subtopics.map((st) => (st.id === id ? { ...st, name } : st));
       setSubtopics(newSubtopics);
-      localStorage.setItem('studyflow_subtopics', JSON.stringify(newSubtopics));
+      localStorage.setItem(user ? `studyflow_subtopics_${user.uid}` : 'studyflow_subtopics', JSON.stringify(newSubtopics));
     }
   };
 
   const deleteSubtopic = async (id: string) => {
-    if (user) {
+    if (user && !isQuotaExceeded) {
       try {
         await deleteDoc(doc(db, 'subtopics', id));
         // Unlink associated mistakes rather than deleting
@@ -438,8 +696,9 @@ export function useJournalStore() {
       setSubtopics(newSubtopics);
       setMistakes(newMistakes);
 
-      localStorage.setItem('studyflow_subtopics', JSON.stringify(newSubtopics));
-      localStorage.setItem('studyflow_mistakes', JSON.stringify(newMistakes));
+      const keyPref = user ? `_${user.uid}` : '';
+      localStorage.setItem(`studyflow_subtopics${keyPref}`, JSON.stringify(newSubtopics));
+      localStorage.setItem(`studyflow_mistakes${keyPref}`, JSON.stringify(newMistakes));
     }
   };
 
@@ -453,7 +712,7 @@ export function useJournalStore() {
       dateLogged: entry.dateLogged || today
     };
 
-    if (user) {
+    if (user && !isQuotaExceeded) {
       try {
         await setDoc(doc(db, 'mistakes', newId), cleanUndefined({ ...newEntry, userId: user.uid }));
       } catch (error) {
@@ -462,13 +721,13 @@ export function useJournalStore() {
     } else {
       const newMistakes = [newEntry, ...mistakes];
       setMistakes(newMistakes);
-      localStorage.setItem('studyflow_mistakes', JSON.stringify(newMistakes));
+      localStorage.setItem(user ? `studyflow_mistakes_${user.uid}` : 'studyflow_mistakes', JSON.stringify(newMistakes));
     }
     return newId;
   };
 
   const editMistake = async (id: string, updatedFields: Partial<MistakeEntry>) => {
-    if (user) {
+    if (user && !isQuotaExceeded) {
       try {
         const existingMistake = mistakes.find((m) => m.id === id);
         if (existingMistake) {
@@ -484,12 +743,12 @@ export function useJournalStore() {
     } else {
       const newMistakes = mistakes.map((m) => (m.id === id ? { ...m, ...updatedFields } as MistakeEntry : m));
       setMistakes(newMistakes);
-      localStorage.setItem('studyflow_mistakes', JSON.stringify(newMistakes));
+      localStorage.setItem(user ? `studyflow_mistakes_${user.uid}` : 'studyflow_mistakes', JSON.stringify(newMistakes));
     }
   };
 
   const deleteMistake = async (id: string) => {
-    if (user) {
+    if (user && !isQuotaExceeded) {
       try {
         await deleteDoc(doc(db, 'mistakes', id));
       } catch (error) {
@@ -498,17 +757,39 @@ export function useJournalStore() {
     } else {
       const newMistakes = mistakes.filter((m) => m.id !== id);
       setMistakes(newMistakes);
-      localStorage.setItem('studyflow_mistakes', JSON.stringify(newMistakes));
+      localStorage.setItem(user ? `studyflow_mistakes_${user.uid}` : 'studyflow_mistakes', JSON.stringify(newMistakes));
+    }
+  };
+
+  const updateNewsletterPreference = async (optIn: boolean) => {
+    if (!user) return;
+    try {
+      const userRef = doc(db, 'users', user.uid);
+      await setDoc(userRef, {
+        newsletterOptIn: optIn,
+        newsletterOptInAt: new Date().toISOString()
+      }, { merge: true });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, `users/${user.uid}`);
     }
   };
 
   return {
     user,
+    userDocData,
     subjects,
     topics,
     subtopics,
     mistakes,
     loading,
+    quotaExceeded: quotaExceeded || isQuotaExceeded,
+    quotaErrorMessage: quotaErrorMessage || (isQuotaExceeded ? `Daily reads quota limits reached (${quotaReads}/${quotaLimit} reads). Your changes will be saved to local browser cache.` : null),
+    quotaReads,
+    quotaLimit,
+    isAdmin,
+    isQuotaExceeded,
+    allUsers,
+    totalLiveReadsToday,
     addSubject,
     editSubject,
     deleteSubject,
@@ -521,6 +802,7 @@ export function useJournalStore() {
     addMistake,
     editMistake,
     deleteMistake,
+    updateNewsletterPreference,
     signInWithGoogle,
     logout
   };

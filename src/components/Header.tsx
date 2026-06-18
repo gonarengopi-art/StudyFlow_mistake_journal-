@@ -29,9 +29,10 @@ export function Header({ userName, onNavigate, onActivateSearch, onOpenQuickAdd,
         {/* Visual typographic Pairing serif and sans */}
         <h1
           onClick={() => onNavigate('dashboard')}
-          className="text-2xl font-serif font-black tracking-tight text-[#2D2A26] cursor-pointer select-none"
+          className="font-serif font-black tracking-tight text-[#2D2A26] cursor-pointer select-none flex items-baseline gap-1.5"
         >
-          StudyFlow
+          <span className="text-2xl">StudyFlow</span>
+          <span className="font-sans text-xs font-normal tracking-wide text-[#9A9184] whitespace-nowrap">mistake journal</span>
         </h1>
       </div>
 

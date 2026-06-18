@@ -45,7 +45,8 @@ export function QuickAddModal({
   // Answers
   const [myAnswer, setMyAnswer] = useState('');
   const [correctAnswer, setCorrectAnswer] = useState('');
-  const [imageUrl, setImageUrl] = useState('');
+  const [imageUrls, setImageUrls] = useState<string[]>([]);
+  const imageUrl = imageUrls[0] || '';
   const [dragActive, setDragActive] = useState(false);
 
   const [isCameraActive, setIsCameraActive] = useState(false);
@@ -96,6 +97,16 @@ export function QuickAddModal({
     setIsCameraActive(false);
   };
 
+  const addImageToUrls = (url: string) => {
+    setImageUrls(prev => {
+      if (prev.length >= 10) {
+        alert("Maximum of 10 photos / screenshots can be added per mistake log.");
+        return prev;
+      }
+      return [...prev, url];
+    });
+  };
+
   const capturePhoto = () => {
     if (videoRef.current) {
       const video = videoRef.current;
@@ -106,7 +117,7 @@ export function QuickAddModal({
       if (ctx) {
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
         const dataUrl = canvas.toDataURL('image/jpeg');
-        setImageUrl(dataUrl);
+        addImageToUrls(dataUrl);
       }
       stopCamera();
     }
@@ -150,7 +161,7 @@ export function QuickAddModal({
       setCustomTopicName('');
       setMyAnswer('');
       setCorrectAnswer('');
-      setImageUrl('');
+      setImageUrls([]);
       setDragActive(false);
       setIsCameraActive(false);
       setCameraStream(null);
@@ -174,7 +185,7 @@ export function QuickAddModal({
     reader.onload = (e) => {
       const result = e.target?.result;
       if (typeof result === 'string') {
-        setImageUrl(result);
+        addImageToUrls(result);
       }
     };
     reader.readAsDataURL(file);
@@ -297,7 +308,8 @@ export function QuickAddModal({
         subjectId: finalSubjectId,
         topicId: finalTopicId,
         dateLogged: dateLogged || new Date().toISOString().split('T')[0],
-        imageUrl: imageUrl.trim() ? imageUrl.trim() : undefined,
+        imageUrl: imageUrls[0] ? imageUrls[0] : undefined,
+        imageUrls: imageUrls.length > 0 ? imageUrls : undefined,
         
         // Logical default fallbacks for instant saving
         originalQuestion: `Reference question/formula for: ${generatedTitle}`,
@@ -306,7 +318,7 @@ export function QuickAddModal({
         whatIGotWrong: '',
         correctExplanation: 'Details pending review. Click "Edit Log" inside this mistake card later to record calculations, screenshots, or proofs.',
         reflection: reflection.trim(),
-        futureAdvice: 'Read equation operands and pace timing checkpoints carefully under pressure.',
+        futureAdvice: '',
         categories: chosenCategories,
         status: 'New'
       });
@@ -536,30 +548,43 @@ export function QuickAddModal({
                       </button>
                     </div>
                   </div>
-                ) : imageUrl ? (
-                  <div className="relative w-full aspect-video max-h-24 rounded-lg overflow-hidden border border-[#E8E2D9] group">
-                    <img src={imageUrl} alt="Uploaded screenshot preview" className="w-full h-full object-cover" />
-                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                      <button
-                        type="button"
-                        onClick={() => setImageUrl('')}
-                        className="p-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors cursor-pointer"
-                        title="Remove screenshot"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  </div>
                 ) : (
                   <div className="flex flex-col items-center w-full py-1 space-y-2">
-                    <div className="flex gap-2.5">
+                    {/* Multi-image previews list */}
+                    {imageUrls.length > 0 && (
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 w-full mb-2 max-h-[160px] overflow-y-auto p-1 scrollbar-thin">
+                        {imageUrls.map((url, index) => (
+                          <div key={index} className="relative aspect-video rounded-lg overflow-hidden border border-[#E8E2D9] group shadow-xs">
+                            <img src={url} alt={`Uploaded preview ${index + 1}`} className="w-full h-full object-cover" />
+                            <div className="absolute inset-x-0 bottom-0 bg-black/60 text-[8px] text-white py-0.5 text-center font-semibold">
+                              Photo {index + 1} {index === 0 && "(Primary)"}
+                            </div>
+                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setImageUrls(prev => prev.filter((_, i) => i !== index));
+                                }}
+                                className="p-1 bg-red-600 hover:bg-red-700 text-white rounded transition-colors cursor-pointer"
+                                title="Remove this photo"
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    <div className="flex gap-2.5 mt-1" onClick={(e) => e.stopPropagation()}>
                       <label 
                         htmlFor="file-upload-modal"
                         className="cursor-pointer flex flex-col items-center justify-center px-3 py-1.5 border border-stone-200 hover:border-stone-400 bg-white hover:bg-stone-50 rounded-lg transition-all shadow-xs text-center min-w-[95px]"
                       >
                         <Upload className="w-3.5 h-3.5 text-[#5A5A40] mb-0.5" />
                         <span className="text-[9px] font-bold text-[#2D2A26]">
-                          Upload File
+                          {imageUrls.length > 0 ? "Upload More" : "Upload File"}
                         </span>
                       </label>
 

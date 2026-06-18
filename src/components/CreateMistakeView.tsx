@@ -71,7 +71,8 @@ export function CreateMistakeView({
   const [dateLogged, setDateLogged] = useState(() => {
     return new Date().toISOString().split('T')[0];
   });
-  const [imageUrl, setImageUrl] = useState('');
+  const [imageUrls, setImageUrls] = useState<string[]>([]);
+  const imageUrl = imageUrls[0] || '';
   const [dragActive, setDragActive] = useState(false);
 
   const [isCameraActive, setIsCameraActive] = useState(false);
@@ -114,6 +115,16 @@ export function CreateMistakeView({
     setIsCameraActive(false);
   };
 
+  const addImageToUrls = (url: string) => {
+    setImageUrls(prev => {
+      if (prev.length >= 10) {
+        alert("Maximum of 10 photos / screenshots can be added per mistake log.");
+        return prev;
+      }
+      return [...prev, url];
+    });
+  };
+
   const capturePhoto = () => {
     if (videoRef.current) {
       const video = videoRef.current;
@@ -124,7 +135,7 @@ export function CreateMistakeView({
       if (ctx) {
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
         const dataUrl = canvas.toDataURL('image/jpeg');
-        setImageUrl(dataUrl);
+        addImageToUrls(dataUrl);
       }
       stopCamera();
     }
@@ -143,7 +154,7 @@ export function CreateMistakeView({
     reader.onload = (e) => {
       const result = e.target?.result;
       if (typeof result === 'string') {
-        setImageUrl(result);
+        addImageToUrls(result);
       }
     };
     reader.readAsDataURL(file);
@@ -194,7 +205,6 @@ export function CreateMistakeView({
   const [correctAnswer, setCorrectAnswer] = useState('');
   const [correctExplanation, setCorrectExplanation] = useState('');
   const [reflection, setReflection] = useState('');
-  const [futureAdvice, setFutureAdvice] = useState('');
   const [status, setStatus] = useState<ReviewStatus>('New');
   const [chosenCategories, setChosenCategories] = useState<MistakeCategory[]>([]);
 
@@ -306,7 +316,8 @@ export function CreateMistakeView({
         topicId: finalTopicId,
         subtopicId: selectedSubtopicId ? selectedSubtopicId : undefined,
         dateLogged,
-        imageUrl: imageUrl.trim() ? imageUrl.trim() : undefined,
+        imageUrl: imageUrls[0] ? imageUrls[0] : undefined,
+        imageUrls: imageUrls.length > 0 ? imageUrls : undefined,
         
         // Logical, descriptive default fallbacks to satisfy database structure without forcing client friction
         originalQuestion: originalQuestion.trim() || `Reference problem for ${generatedTitle}`,
@@ -316,7 +327,7 @@ export function CreateMistakeView({
         correctExplanation: correctExplanation.trim() || 'Study steps pending. Review this card later to log full solution details.',
         
         reflection: reflection.trim() || 'Quick logged mistake. Needs reflection.',
-        futureAdvice: futureAdvice.trim() || 'Review formulas carefully and pace through similar prompts under moderate timer pressure.',
+        futureAdvice: '',
         categories: chosenCategories.length > 0 ? chosenCategories : ['Other'],
         status: status,
       });
@@ -576,30 +587,43 @@ export function CreateMistakeView({
                         </button>
                       </div>
                     </div>
-                  ) : imageUrl ? (
-                    <div className="relative w-full aspect-video md:h-28 rounded-lg overflow-hidden border border-[#E8E2D9] group">
-                      <img src={imageUrl} alt="Uploaded preview" className="w-full h-full object-cover" />
-                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                        <button
-                          type="button"
-                          onClick={() => setImageUrl('')}
-                          className="p-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors cursor-pointer"
-                          title="Remove attached screenshot"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </div>
                   ) : (
                     <div className="flex flex-col items-center w-full py-2 space-y-3">
-                      <div className="flex gap-3">
+                      {/* Multiple photo previews */}
+                      {imageUrls.length > 0 && (
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 w-full mb-3 max-h-[220px] overflow-y-auto p-1 scrollbar-thin">
+                          {imageUrls.map((url, index) => (
+                            <div key={index} className="relative aspect-video rounded-lg overflow-hidden border border-[#E8E2D9] group shadow-xs">
+                              <img src={url} alt={`Uploaded preview ${index + 1}`} className="w-full h-full object-cover" />
+                              <div className="absolute inset-x-0 bottom-0 bg-black/60 text-[9px] text-white py-0.5 text-center font-semibold">
+                                Photo {index + 1} {index === 0 && "(Primary)"}
+                              </div>
+                              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setImageUrls(prev => prev.filter((_, i) => i !== index));
+                                  }}
+                                  className="p-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors cursor-pointer"
+                                  title="Remove this photo"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      <div className="flex gap-3 mt-1" onClick={(e) => e.stopPropagation()}>
                         <label 
                           htmlFor="file-upload-main"
                           className="cursor-pointer flex flex-col items-center justify-center px-4 py-2 border border-stone-200 hover:border-stone-400 bg-white hover:bg-stone-50 rounded-xl transition-all shadow-xs text-center min-w-[110px]"
                         >
                           <Upload className="w-4 h-4 text-[#5A5A40] mb-1" />
                           <span className="text-[10px] font-bold text-[#2D2A26]">
-                            Upload File
+                            {imageUrls.length > 0 ? "Upload More" : "Upload File"}
                           </span>
                         </label>
 
@@ -706,7 +730,18 @@ export function CreateMistakeView({
                   type="text"
                   placeholder="e.g. https://images.unsplash.com/photo-1543002588..."
                   value={imageUrl}
-                  onChange={(e) => setImageUrl(e.target.value)}
+                  onChange={(e) => {
+                    const val = e.target.value.trim();
+                    if (val) {
+                      setImageUrls(prev => {
+                        const next = [...prev];
+                        next[0] = val;
+                        return next;
+                      });
+                    } else {
+                      setImageUrls(prev => prev.slice(1));
+                    }
+                  }}
                   className="w-full text-xs p-3 border border-[#E8E2D9] outline-none focus:border-[#5A5A40] rounded-xl bg-[#F5F2ED]/30 text-[#2D2A26]"
                   disabled={isSubmitting}
                 />
@@ -735,18 +770,7 @@ export function CreateMistakeView({
                 ></textarea>
               </div>
 
-              {/* Future Advice */}
-              <div>
-                <label className="block text-[10px] font-bold text-[#5A5A40] uppercase tracking-widest mb-1.5">Advice: What should I remember next time? (Optional)</label>
-                <textarea
-                  rows={3}
-                  placeholder="The takeaway lesson or strategy for future sessions..."
-                  value={futureAdvice}
-                  onChange={(e) => setFutureAdvice(e.target.value)}
-                  className="w-full text-xs p-3 border border-[#E8E2D9] outline-none focus:border-[#5A5A40] rounded-xl bg-[#F5F2ED]/30 text-[#2D2A26]"
-                  disabled={isSubmitting}
-                ></textarea>
-              </div>
+
 
               {/* Review status and date */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-3 border-t border-[#E8E2D9]/40">

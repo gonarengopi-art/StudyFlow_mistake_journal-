@@ -12,8 +12,30 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    function isAdmin() {
+      return isSignedIn() 
+        && request.auth.token.email == "gonarengopi@gmail.com";
+    }
+
     function isValidId(id) {
       return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // User validation function
+    function isValidUser(data) {
+      return data.keys().hasAll(['uid', 'email', 'displayName', 'lastActive'])
+        && data.keys().size() <= 12
+        && (data.uid == request.auth.uid || isAdmin())
+        && data.email is string && data.email.size() <= 200
+        && data.displayName is string && data.displayName.size() <= 200
+        && (!data.keys().hasAny(['joinedAt']) || (data.joinedAt is string && data.joinedAt.size() <= 100))
+        && data.lastActive is string && data.lastActive.size() <= 100
+        && (!data.keys().hasAny(['photoURL']) || (data.photoURL is string && data.photoURL.size() <= 2000))
+        && (!data.keys().hasAny(['newsletterOptIn']) || (data.newsletterOptIn is bool))
+        && (!data.keys().hasAny(['newsletterOptInAt']) || (data.newsletterOptInAt is string && data.newsletterOptInAt.size() <= 100))
+        && (!data.keys().hasAny(['dailyQuotaLimit']) || (data.dailyQuotaLimit is int))
+        && (!data.keys().hasAny(['dailyQuotaReads']) || (data.dailyQuotaReads is int))
+        && (!data.keys().hasAny(['dailyQuotaDate']) || (data.dailyQuotaDate is string && data.dailyQuotaDate.size() <= 100));
     }
 
     // Subject validation function
@@ -53,7 +75,7 @@ service cloud.firestore {
         'correctExplanation', 'reflection', 'futureAdvice', 'categories',
         'status', 'userId'
       ])
-        && data.keys().size() >= 15 && data.keys().size() <= 19
+        && data.keys().size() >= 15 && data.keys().size() <= 20
         && data.id is string && data.id.size() <= 128 && data.id.size() > 0
         && data.title is string && data.title.size() <= 200 && data.title.size() > 0
         && data.subjectId is string && data.subjectId.size() <= 128
@@ -61,6 +83,7 @@ service cloud.firestore {
         && (!data.keys().hasAny(['subtopicId']) || (data.subtopicId is string && data.subtopicId.size() <= 128))
         && data.dateLogged is string && data.dateLogged.size() <= 20
         && (!data.keys().hasAny(['imageUrl']) || (data.imageUrl is string && data.imageUrl.size() <= 2000000))
+        && (!data.keys().hasAny(['imageUrls']) || (data.imageUrls is list && data.imageUrls.size() <= 10))
         && (!data.keys().hasAny(['fileUrl']) || (data.fileUrl is string && data.fileUrl.size() <= 2000000))
         && (!data.keys().hasAny(['fileName']) || (data.fileName is string && data.fileName.size() <= 500))
         && data.originalQuestion is string && data.originalQuestion.size() <= 50000
@@ -85,30 +108,40 @@ service cloud.firestore {
 
     // MATCH BLOCKS FOR ALL ENTITIES
     
+    match /users/{userId} {
+      allow create: if isSignedIn() && userId == request.auth.uid && isValidUser(request.resource.data);
+      allow update: if isSignedIn() && (
+        (userId == request.auth.uid && isValidUser(request.resource.data))
+        || (isAdmin() && isValidUser(request.resource.data))
+      );
+      allow read: if isSignedIn() && (userId == request.auth.uid || isAdmin());
+      allow list: if isAdmin();
+    }
+
     match /subjects/{subjectId} {
       allow create: if isSignedIn() && isValidId(subjectId) && isValidSubject(request.resource.data);
-      allow read, list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow read, list: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
       allow update: if isSignedIn() && isValidSubject(request.resource.data) && resource.data.userId == request.auth.uid;
       allow delete: if isSignedIn() && resource.data.userId == request.auth.uid;
     }
 
     match /topics/{topicId} {
       allow create: if isSignedIn() && isValidId(topicId) && isValidTopic(request.resource.data);
-      allow read, list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow read, list: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
       allow update: if isSignedIn() && isValidTopic(request.resource.data) && resource.data.userId == request.auth.uid;
       allow delete: if isSignedIn() && resource.data.userId == request.auth.uid;
     }
 
     match /subtopics/{subtopicId} {
       allow create: if isSignedIn() && isValidId(subtopicId) && isValidSubtopic(request.resource.data);
-      allow read, list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow read, list: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
       allow update: if isSignedIn() && isValidSubtopic(request.resource.data) && resource.data.userId == request.auth.uid;
       allow delete: if isSignedIn() && resource.data.userId == request.auth.uid;
     }
 
     match /mistakes/{mistakeId} {
       allow create: if isSignedIn() && isValidId(mistakeId) && isValidMistake(request.resource.data);
-      allow read, list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow read, list: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
       allow update: if isSignedIn() && isValidMistake(request.resource.data) && resource.data.userId == request.auth.uid;
       allow delete: if isSignedIn() && resource.data.userId == request.auth.uid;
     }

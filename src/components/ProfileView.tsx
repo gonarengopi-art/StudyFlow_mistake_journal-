@@ -5,7 +5,7 @@
 
 import React, { useState } from 'react';
 import { Subject, Topic, Subtopic, MistakeEntry } from '../types';
-import { User, Award, CheckCircle, Clock, RotateCcw, Save, Trash2, ShieldCheck, Mail } from 'lucide-react';
+import { User, Award, CheckCircle, Clock, RotateCcw, Save, Trash2, ShieldCheck, Mail, BrainCircuit } from 'lucide-react';
 
 interface ProfileViewProps {
   userName: string;
@@ -18,6 +18,7 @@ interface ProfileViewProps {
   user: any; // User | null
   onSignInWithGoogle: () => Promise<void>;
   onLogout: () => Promise<void>;
+  onOpenOnboarding?: () => void;
 }
 
 export function ProfileView({
@@ -31,6 +32,7 @@ export function ProfileView({
   user,
   onSignInWithGoogle,
   onLogout,
+  onOpenOnboarding,
 }: ProfileViewProps) {
   const [tempName, setTempName] = useState(userName);
   const [saveSuccess, setSaveSuccess] = useState(false);
@@ -69,6 +71,27 @@ export function ProfileView({
         <h2 className="font-serif text-3xl font-semibold text-[#2D2A26] tracking-tight mb-2">Student Profile</h2>
         <p className="font-sans text-sm text-[#6B6357]">Manage your study identity and mistake journal database sessions.</p>
       </section>
+
+      {/* Onboarding Guide Card */}
+      {onOpenOnboarding && (
+        <div className="bg-[#FAF8F5] border border-[#E8E2D9] p-5 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm animate-slide-down">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-[#5A5A40]/10 flex items-center justify-center shrink-0 text-[#5A5A40]">
+              <BrainCircuit className="w-5 h-5 animate-pulse" />
+            </div>
+            <div>
+              <h4 className="font-serif text-sm font-bold text-[#2D2A26]">Need a Refresher?</h4>
+              <p className="text-xs text-[#6B6357]">Re-launch the step-by-step interactive onboarding tour anytime to review active recall strategies.</p>
+            </div>
+          </div>
+          <button
+            onClick={onOpenOnboarding}
+            className="px-4.5 py-2.5 bg-[#5A5A40] hover:bg-[#4D4D36] text-white rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 shadow-sm"
+          >
+            Launch Guide Tour
+          </button>
+        </div>
+      )}
 
       {/* Cloud Sync Status Widget */}
       <div className="bg-white border border-[#E8E2D9] p-6 rounded-2xl shadow-sm space-y-4">

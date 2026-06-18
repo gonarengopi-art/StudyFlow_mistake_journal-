@@ -5,7 +5,7 @@
 
 import React, { useMemo } from 'react';
 import { Subject, MistakeEntry } from '../types';
-import { BookOpen, Flame, ArrowRight, Award, AlertCircle, FileSpreadsheet, RotateCcw, Plus, Sparkles, TrendingUp, ChevronRight } from 'lucide-react';
+import { BookOpen, Flame, ArrowRight, Award, AlertCircle, FileSpreadsheet, RotateCcw, Plus, Sparkles, TrendingUp, ChevronRight, HelpCircle } from 'lucide-react';
 
 interface DashboardViewProps {
   subjects: Subject[];
@@ -15,6 +15,14 @@ interface DashboardViewProps {
   onStartReview: () => void;
   userName: string;
   onOpenQuickAdd?: () => void;
+  onOpenOnboarding?: () => void;
+  quotaReads?: number;
+  quotaLimit?: number;
+  isQuotaExceeded?: boolean;
+  user?: any;
+  isAdmin?: boolean;
+  totalLiveReadsToday?: number;
+  allUsers?: any[];
 }
 
 export function DashboardView({
@@ -25,6 +33,14 @@ export function DashboardView({
   onStartReview,
   userName,
   onOpenQuickAdd,
+  onOpenOnboarding,
+  quotaReads = 0,
+  quotaLimit = 1000,
+  isQuotaExceeded = false,
+  user,
+  isAdmin = false,
+  totalLiveReadsToday = 0,
+  allUsers = [],
 }: DashboardViewProps) {
   // Compute analytics from current state
   const totalMistakesCount = mistakes.length;
@@ -118,7 +134,16 @@ export function DashboardView({
         </div>
 
         {/* Quick Action Buttons on Dashboard */}
-        <div className="flex items-center gap-2.5">
+        <div className="flex flex-wrap items-center gap-2.5">
+          {onOpenOnboarding && (
+            <button
+              onClick={onOpenOnboarding}
+              className="px-4.5 py-3.5 bg-white hover:bg-[#F5F2ED] text-[#5A5A40] border border-[#E8E2D9] rounded-full font-sans font-bold text-xs uppercase tracking-wider flex items-center gap-1.5 transition-all cursor-pointer shadow-xs"
+              title="View step-by-step app user guide"
+            >
+              <HelpCircle className="w-4 h-4 text-[#D98A6C]" /> Take a Tour
+            </button>
+          )}
           {onOpenQuickAdd && (
             <button
               onClick={onOpenQuickAdd}
@@ -136,6 +161,159 @@ export function DashboardView({
           </button>
         </div>
       </section>
+
+      {/* Daily Quota Indicator */}
+      {user && (
+        isAdmin ? (
+          /* Admin Special Unlimited Control Hub & Metrics */
+          <section id="daily-quota-hud" className="bg-white border-2 border-[#5A5A40]/40 rounded-2xl p-6 text-left transition-all hover:shadow-xs space-y-5">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-[#E8E2D9] pb-4">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-indigo-500 animate-pulse"></span>
+                  <h3 className="font-mono text-[10.5px] font-extrabold text-[#6B6357] uppercase tracking-widest">
+                    Creator Admin Control Panel
+                  </h3>
+                </div>
+                <h4 className="text-lg font-serif font-black text-[#2D2A26]">
+                  Real-time Server Quota Pulse
+                </h4>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <span className="py-1 px-3 bg-indigo-50 border border-indigo-200 text-indigo-800 rounded-full text-[10px] font-mono font-bold uppercase tracking-wider">
+                  Admin Status: Unlimited
+                </span>
+                <span className="py-1 px-3 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-full text-[10px] font-mono font-bold uppercase tracking-wider">
+                  Firebase Telemetry Direct
+                </span>
+              </div>
+            </div>
+
+            {/* Simulated Firebase Panel */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 bg-stone-50/50 p-4 rounded-xl border border-stone-100">
+              {/* Left Column: Firebase-style metrics block */}
+              <div className="lg:col-span-5 space-y-4">
+                <h5 className="font-sans font-bold text-xs uppercase text-[#6B6357] tracking-wider mb-2">
+                  Billable Metrics Summary
+                </h5>
+
+                {/* Reads Block */}
+                <div className="p-4 bg-white border border-[#E8E2D9] rounded-xl flex items-start gap-3.5 shadow-xs">
+                  <div className="mt-1 h-4 w-4 shrink-0 rounded bg-[#1E88E5] flex items-center justify-center text-white text-[10px] font-bold">
+                    ✓
+                  </div>
+                  <div>
+                    <span className="block text-[10px] uppercase font-bold text-[#6B6357] tracking-widest leading-none mb-1">Total Web Reads Today</span>
+                    <span className="font-mono text-3xl font-extrabold text-[#1E88E5] block tracking-tight">
+                      {totalLiveReadsToday >= 1000 ? `${(totalLiveReadsToday / 1000).toFixed(1)}K` : totalLiveReadsToday}
+                      <span className="text-sm font-sans font-normal text-stone-500 ml-1.5 font-bold">total</span>
+                    </span>
+                    <span className="text-[10px] text-[#6B6357] mt-1 block">Cumulative Firestore queries performed programmatically by all active users today</span>
+                  </div>
+                </div>
+
+                {/* Individual admin card */}
+                <div className="p-3.5 bg-white border border-dashed border-[#E8E2D9] rounded-xl flex items-center justify-between text-xs text-[#2D2A26]">
+                  <div className="flex items-center gap-2 font-medium">
+                    <span className="w-1.5 h-1.5 rounded-full bg-stone-400"></span>
+                    <span>Your session reads today:</span>
+                  </div>
+                  <span className="font-mono font-bold bg-[#FAF8F5] px-2 py-0.5 border border-[#E8E2D9] rounded text-emerald-800">
+                    {quotaReads} / ∞ (Exempt)
+                  </span>
+                </div>
+              </div>
+
+              {/* Right Column: User traffic breakdowns */}
+              <div className="lg:col-span-7 flex flex-col justify-between">
+                <div>
+                  <h5 className="font-sans font-bold text-xs uppercase text-[#6B6357] tracking-wider mb-3">
+                    Active Readers Breakdown
+                  </h5>
+                  
+                  {allUsers.filter(u => (u.dailyQuotaReads || 0) > 0).length === 0 ? (
+                    <div className="p-8 bg-dashed border border-stone-200 rounded-xl text-center text-stone-400 text-xs">
+                      No customer read events counted today yet. Users will appear here when they open StudyFlow.
+                    </div>
+                  ) : (
+                    <div className="max-h-[160px] overflow-y-auto border border-stone-200/60 rounded-xl divide-y divide-[#E8E2D9]/40 bg-white">
+                      {allUsers
+                        .filter(u => (u.dailyQuotaReads || 0) > 0)
+                        .sort((a, b) => (b.dailyQuotaReads || 0) - (a.dailyQuotaReads || 0))
+                        .map((u) => {
+                          const isMe = u.id === user?.uid;
+                          return (
+                            <div key={u.id} className="p-2.5 flex items-center justify-between hover:bg-stone-50 transition-colors text-xs text-left">
+                              <div className="flex flex-col max-w-[70%]">
+                                <span className={`font-medium text-[#2D2A26] truncate ${isMe ? 'font-bold' : ''}`}>
+                                  {u.email || 'Anonymous Student'} {isMe && <span className="text-[10px] text-indigo-600 font-mono">(You)</span>}
+                                </span>
+                                <span className="text-[9px] text-[#6B6357] font-mono leading-none mt-0.5">
+                                  UID: {u.id.substring(0, 8)}...
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <span className="text-[10px] text-[#6B6357] font-mono">{u.dailyQuotaDate}</span>
+                                <span className="px-2 py-0.5 font-mono font-bold text-xs rounded bg-stone-100 text-stone-700">
+                                  {u.dailyQuotaReads || 0} reads
+                                </span>
+                              </div>
+                            </div>
+                          );
+                        })}
+                    </div>
+                  )}
+                </div>
+                
+                <div className="text-[10.5px] text-[#6B6357] text-left mt-3 pt-3 border-t border-dashed border-stone-200/80 flex items-center gap-1.5 animate-fade-in">
+                  <span className="font-semibold text-indigo-600 font-mono">Note:</span> 
+                  <span>Admin limits are completely disabled. These charts update dynamically in real time and mirror Firebase Cloud usage indexes directly.</span>
+                </div>
+              </div>
+            </div>
+          </section>
+        ) : (
+          /* Normal User HUD Display */
+          <section id="daily-quota-hud" className="bg-white border border-[#E8E2D9] rounded-2xl p-5 text-left transition-all hover:shadow-xs">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
+              <div className="space-y-1">
+                <h3 className="font-mono text-[10px] font-extrabold text-[#6B6357] uppercase tracking-widest flex items-center gap-1.5">
+                  <span className={`w-2 h-2 rounded-full animate-pulse ${isQuotaExceeded ? 'bg-orange-400' : 'bg-[#5A5A40]'}`}></span>
+                  Daily Reads Pulse
+                </h3>
+                <p className="text-sm font-serif font-semibold text-[#2D2A26]">
+                  Today you have consumed <span className="font-mono text-[#D98A6C]">{quotaReads}</span> reads out of your <span className="font-mono">{quotaLimit}</span> allowance
+                </p>
+              </div>
+              <div>
+                {isQuotaExceeded ? (
+                  <span className="py-1 px-3 bg-[#D98A6C]/10 border border-[#D98A6C]/30 text-[#D98A6C] rounded-full text-[10.5px] font-mono font-bold uppercase tracking-wider">
+                    Offline Caching Active
+                  </span>
+                ) : (
+                  <span className="py-1 px-3 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-full text-[10.5px] font-mono font-bold uppercase tracking-wider">
+                    Live Cloud Sync Active
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Progress Bar */}
+            <div className="w-full bg-stone-100 rounded-full h-2.5 overflow-hidden border border-stone-200/50 mb-1.5">
+              <div 
+                className={`h-full transition-all duration-300 rounded-full ${isQuotaExceeded ? 'bg-[#D98A6C]' : 'bg-[#5A5A40]'}`}
+                style={{ width: `${Math.min(100, Math.round((quotaReads / quotaLimit) * 100))}%` }}
+              ></div>
+            </div>
+
+            <div className="flex justify-between items-center text-[10px] text-[#6B6357] font-mono">
+              <span>0%</span>
+              <span>{Math.min(100, Math.round((quotaReads / quotaLimit) * 100))}% consumed ({quotaReads} of {quotaLimit} reads)</span>
+              <span>100%</span>
+            </div>
+          </section>
+        )
+      )}
 
       {/* NEW SECTION: Total Mistakes, New, Reviewing, Mastered Status Grid */}
       <section className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">

@@ -47,6 +47,7 @@
         "subtopicId": { "type": "string", "description": "Mapped subtopic ID" },
         "dateLogged": { "type": "string", "format": "date", "description": "Date logged as YYYY-MM-DD" },
         "imageUrl": { "type": "string", "description": "Optional image data" },
+        "imageUrls": { "type": "array", "description": "Supporting multiple uploaded images / photos" },
         "fileUrl": { "type": "string", "description": "Optional original question file attachment" },
         "fileName": { "type": "string", "description": "Optional file name" },
         "originalQuestion": { "type": "string", "description": "Question concept prompt description" },
@@ -71,9 +72,32 @@
         "userName": { "type": "string", "description": "Human representation name" }
       },
       "required": ["userId", "userName"]
+    },
+    "User": {
+      "title": "User",
+      "description": "User registration and tracking info, accessible by Admin",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "Owner user UID" },
+        "email": { "type": "string", "description": "Email address of the user" },
+        "displayName": { "type": "string", "description": "User profile name" },
+        "photoURL": { "type": "string", "description": "User profile photo URL" },
+        "joinedAt": { "type": "string", "description": "ISO timestamp of registration" },
+        "lastActive": { "type": "string", "description": "ISO timestamp of last active session" },
+        "newsletterOptIn": { "type": "boolean", "description": "Whether the user opted in to StudyFlow Newsletter" },
+        "newsletterOptInAt": { "type": "string", "description": "ISO timestamp of newsletter registration" },
+        "dailyQuotaLimit": { "type": "integer", "description": "Maximum allowed Firestore reads per day for this user" },
+        "dailyQuotaReads": { "type": "integer", "description": "Current number of reads counted today" },
+        "dailyQuotaDate": { "type": "string", "description": "The date for which records are currently logged as YYYY-MM-DD" }
+      },
+      "required": ["uid", "email", "displayName", "joinedAt", "lastActive"]
     }
   },
   "firestore": {
+    "users/{userId}": {
+      "schema": "User",
+      "description": "User tracking database for admin view"
+    },
     "subjects/{subjectId}": {
       "schema": "Subject",
       "description": "User specific subjects collection"
