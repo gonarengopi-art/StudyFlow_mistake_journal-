@@ -4,17 +4,19 @@
  */
 
 import React from 'react';
-import { Menu, Search, User } from 'lucide-react';
+import { Menu, Search, User, Sparkles } from 'lucide-react';
+import { ViewTab } from './BottomNavBar';
 
 interface HeaderProps {
   userName: string;
-  onNavigate: (view: 'dashboard' | 'topics' | 'add' | 'insights' | 'profile') => void;
+  onNavigate: (view: ViewTab) => void;
   onActivateSearch: () => void;
   onOpenQuickAdd?: () => void;
   userPhoto?: string | null;
+  isPremium?: boolean;
 }
 
-export function Header({ userName, onNavigate, onActivateSearch, onOpenQuickAdd, userPhoto }: HeaderProps) {
+export function Header({ userName, onNavigate, onActivateSearch, onOpenQuickAdd, userPhoto, isPremium }: HeaderProps) {
   return (
     <header className="fixed top-0 left-0 w-full z-50 bg-[#FDFCF8]/95 border-b border-[#E8E2D9] px-4 md:px-8 h-16 flex justify-between items-center backdrop-blur-md">
       <div className="flex items-center gap-3.5">
@@ -27,21 +29,39 @@ export function Header({ userName, onNavigate, onActivateSearch, onOpenQuickAdd,
         </button>
         
         {/* Visual typographic Pairing serif and sans */}
-        <h1
-          onClick={() => onNavigate('dashboard')}
-          className="font-serif font-black tracking-tight text-[#2D2A26] cursor-pointer select-none flex items-baseline gap-1.5"
-        >
-          <span className="text-2xl">StudyFlow</span>
-          <span className="font-sans text-xs font-normal tracking-wide text-[#9A9184] whitespace-nowrap">mistake journal</span>
-        </h1>
+        <div className="flex items-center gap-2">
+          <h1
+            onClick={() => onNavigate('dashboard')}
+            className="font-serif font-black tracking-tight text-[#2D2A26] cursor-pointer select-none flex items-baseline gap-1.5"
+          >
+            <span className="text-2xl">StudyFlow</span>
+            <span className="font-sans text-xs font-normal tracking-wide text-[#9A9184] whitespace-nowrap hidden sm:inline">mistake journal</span>
+          </h1>
+          {isPremium && (
+            <span className="inline-flex items-center gap-0.5 px-2 py-0.5 bg-[#D4AF37]/15 text-[#B8901C] border border-[#D4AF37]/25 text-[8.5px] font-sans font-extrabold uppercase rounded-full tracking-wider animate-fade-in shrink-0">
+              ★ Lifetime
+            </span>
+          )}
+        </div>
       </div>
 
-      <div className="flex items-center gap-3.5">
+      <div className="flex items-center gap-2 sm:gap-3.5">
+        {/* Go Lifetime Paywall Shortcut Button */}
+        {!isPremium && (
+          <button
+            onClick={() => onNavigate('upgrade')}
+            className="flex items-center gap-1 px-3 py-1.5 sm:px-4 sm:py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-sans text-[10px] sm:text-xs font-bold uppercase tracking-wider rounded-full transition-all cursor-pointer shadow-sm shrink-0"
+            title="Unlock Lifetime Premium Plan"
+          >
+            ★ Go Lifetime
+          </button>
+        )}
+
         {/* Quick Add Button */}
         {onOpenQuickAdd && (
           <button
             onClick={onOpenQuickAdd}
-            className="flex items-center gap-1 px-3 py-1.5 sm:px-4 sm:py-2 bg-[#D98A6C] hover:bg-[#C17A5E] text-white font-sans text-[11px] sm:text-xs font-bold uppercase tracking-wider rounded-full transition-colors cursor-pointer shadow-sm"
+            className="flex items-center gap-1 px-3 py-1.5 sm:px-4 sm:py-2 bg-[#D98A6C] hover:bg-[#C17A5E] text-white font-sans text-[10px] sm:text-xs font-bold uppercase tracking-wider rounded-full transition-colors cursor-pointer shadow-sm shrink-0"
             title="Rapidly Log Error Entry"
           >
             <span className="text-sm font-semibold sm:mr-0.5">+</span> Quick Add

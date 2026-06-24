@@ -547,8 +547,13 @@ export function AdminView({ user }: AdminViewProps) {
                       </div>
                     )}
                     <div className="text-left">
-                      <h4 className="font-serif font-semibold text-sm text-[#2D2A26] flex items-center gap-1.5">
+                      <h4 className="font-serif font-semibold text-sm text-[#2D2A26] flex items-center gap-1.5 flex-wrap">
                         {item.displayName || 'Anonymous Student'}
+                        {item.isPremium && (
+                          <span className="inline-flex items-center gap-0.5 px-1.5 py-0.25 bg-[#D4AF37]/15 text-[#B8901C] border border-[#D4AF37]/25 text-[9px] font-sans font-bold uppercase rounded-md tracking-wider">
+                            ★ Lifetime
+                          </span>
+                        )}
                       </h4>
                       <p className="text-xs text-[#6B6357] leading-tight font-mono break-all">{item.email}</p>
                     </div>
@@ -674,6 +679,19 @@ export function AdminView({ user }: AdminViewProps) {
                           className="px-2.5 py-1 text-[10px] bg-white border border-[#E8E2D9] text-[#D98A6C] rounded-lg hover:bg-orange-50 font-bold transition-all cursor-pointer"
                         >
                           Reset Default (1k)
+                        </button>
+                        <button
+                          onClick={async () => {
+                            const isPremium = item.isPremium === true;
+                            await setDoc(doc(db, 'users', item.uid), { 
+                              isPremium: !isPremium, 
+                              dailyQuotaLimit: !isPremium ? 100000 : 1000,
+                              premiumUpgradedAt: !isPremium ? new Date().toISOString() : null 
+                            }, { merge: true });
+                          }}
+                          className={`px-2.5 py-1 text-[10px] border rounded-lg font-bold transition-all cursor-pointer ${item.isPremium ? 'bg-red-50 border-red-200 text-red-600 hover:bg-red-100' : 'bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100'}`}
+                        >
+                          {item.isPremium ? 'Revoke Premium' : 'Grant Lifetime'}
                         </button>
                       </div>
                     </div>

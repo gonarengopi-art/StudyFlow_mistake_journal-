@@ -160,8 +160,9 @@ export function useJournalStore() {
   };
 
   const isAdmin = user?.email === 'gonarengopi@gmail.com';
+  const isPremium = userDocData?.isPremium === true;
   const quotaLimit = userDocData?.dailyQuotaLimit !== undefined ? userDocData.dailyQuotaLimit : 1000;
-  const isQuotaExceeded = !isAdmin && quotaReads >= quotaLimit;
+  const isQuotaExceeded = !isAdmin && !isPremium && quotaReads >= quotaLimit;
 
   // Admin-specific state for global quota monitoring
   const [allUsers, setAllUsers] = useState<any[]>([]);
@@ -704,6 +705,10 @@ export function useJournalStore() {
 
   // MISTAKE OPERATIONS
   const addMistake = async (entry: Omit<MistakeEntry, 'id' | 'dateLogged'> & { dateLogged?: string }): Promise<string> => {
+    if (!isPremium && !isAdmin && mistakes.length >= 5) {
+      throw new Error("Free tier limit reached: You can only log up to 5 mistakes. Please upgrade to our Lifetime Supporter plan to unlock unlimited mistakes!");
+    }
+
     const newId = `m-${Date.now()}`;
     const today = new Date().toISOString().split('T')[0];
     const newEntry: MistakeEntry = {
@@ -774,6 +779,21 @@ export function useJournalStore() {
     }
   };
 
+  const upgradeUserPremium = async (userIdToUpgrade?: string, setPremium: boolean = true) => {
+    const targetUid = userIdToUpgrade || user?.uid;
+    if (!targetUid) return;
+    try {
+      const userRef = doc(db, 'users', targetUid);
+      await setDoc(userRef, {
+        isPremium: setPremium,
+        premiumUpgradedAt: setPremium ? new Date().toISOString() : null,
+        dailyQuotaLimit: setPremium ? 100000 : 1000
+      }, { merge: true });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, `users/${targetUid}`);
+    }
+  };
+
   return {
     user,
     userDocData,
@@ -787,6 +807,7 @@ export function useJournalStore() {
     quotaReads,
     quotaLimit,
     isAdmin,
+    isPremium,
     isQuotaExceeded,
     allUsers,
     totalLiveReadsToday,
@@ -803,6 +824,7 @@ export function useJournalStore() {
     editMistake,
     deleteMistake,
     updateNewsletterPreference,
+    upgradeUserPremium,
     signInWithGoogle,
     logout
   };

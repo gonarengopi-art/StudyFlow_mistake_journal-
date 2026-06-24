@@ -23,15 +23,22 @@ interface LandingPageProps {
   onSignInWithGoogle: () => Promise<void>;
   onContinueAsGuest: () => void;
   isLoading: boolean;
+  onOpenLegal: (tab: 'privacy' | 'terms') => void;
 }
 
 type FeatureTab = 'log' | 'structure' | 'review';
 
-export function LandingPage({ onSignInWithGoogle, onContinueAsGuest, isLoading }: LandingPageProps) {
+export function LandingPage({ onSignInWithGoogle, onContinueAsGuest, isLoading, onOpenLegal }: LandingPageProps) {
   const [activeTab, setActiveTab] = useState<FeatureTab>('log');
   const [isSigningIn, setIsSigningIn] = useState(false);
+  const [hasAccepted, setHasAccepted] = useState(false);
+  const [showErrorHint, setShowErrorHint] = useState(false);
 
   const handleSignIn = async () => {
+    if (!hasAccepted) {
+      setShowErrorHint(true);
+      return;
+    }
     setIsSigningIn(true);
     try {
       await onSignInWithGoogle();
@@ -40,6 +47,14 @@ export function LandingPage({ onSignInWithGoogle, onContinueAsGuest, isLoading }
     } finally {
       setIsSigningIn(false);
     }
+  };
+
+  const handleContinueGuest = () => {
+    if (!hasAccepted) {
+      setShowErrorHint(true);
+      return;
+    }
+    onContinueAsGuest();
   };
 
   return (
@@ -59,7 +74,7 @@ export function LandingPage({ onSignInWithGoogle, onContinueAsGuest, isLoading }
         
         <div className="flex items-center gap-4">
           <button 
-            onClick={onContinueAsGuest}
+            onClick={handleContinueGuest}
             className="text-xs font-semibold text-[#6B6357] hover:text-[#2D2A26] transition-colors"
           >
             Guest Sandbox
@@ -100,6 +115,57 @@ export function LandingPage({ onSignInWithGoogle, onContinueAsGuest, isLoading }
             Stop making the same error twice. StudyFlow allows you to map individual questions, write rigorous reflections, and design an active recall feedback loop tailored specifically to your weak points.
           </p>
 
+          {/* Legal Consent Checkbox Card */}
+          <div className={`p-4 rounded-2xl border transition-all duration-300 max-w-lg ${
+            showErrorHint 
+              ? 'bg-red-50/70 border-red-300 shadow-sm shadow-red-100' 
+              : 'bg-[#FAF8F5] border-[#E8E2D9] hover:border-[#2D2A26]/30'
+          }`}>
+            <label className="flex items-start gap-3 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={hasAccepted}
+                onChange={(e) => {
+                  setHasAccepted(e.target.checked);
+                  if (e.target.checked) setShowErrorHint(false);
+                }}
+                className="mt-0.5 w-4.5 h-4.5 rounded border-[#E8E2D9] text-[#2D2A26] focus:ring-[#2D2A26] cursor-pointer accent-[#2D2A26]"
+              />
+              <span className="text-[11.5px] leading-relaxed text-[#6B6357]">
+                I acknowledge and agree to StudyFlow's{' '}
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onOpenLegal('terms');
+                  }}
+                  className="font-bold text-[#2D2A26] underline hover:text-stone-900 cursor-pointer"
+                >
+                  Terms & Conditions
+                </button>{' '}
+                and{' '}
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onOpenLegal('privacy');
+                  }}
+                  className="font-bold text-[#2D2A26] underline hover:text-stone-900 cursor-pointer"
+                >
+                  Privacy Policy
+                </button>
+                .
+              </span>
+            </label>
+            {showErrorHint && (
+              <p className="text-[10px] text-red-600 font-bold tracking-tight mt-2 flex items-center gap-1 animate-fade-in">
+                ⚠️ Please accept the Terms & Conditions and Privacy Policy to continue.
+              </p>
+            )}
+          </div>
+
           <div className="pt-2 sm:flex items-center gap-3 space-y-3 sm:space-y-0">
             <button
               onClick={handleSignIn}
@@ -116,7 +182,7 @@ export function LandingPage({ onSignInWithGoogle, onContinueAsGuest, isLoading }
             </button>
 
             <button
-              onClick={onContinueAsGuest}
+              onClick={handleContinueGuest}
               className="w-full sm:w-auto px-6 py-3.5 bg-white border border-[#E8E2D9] hover:bg-[#FDFCF8] hover:border-[#2D2A26] rounded-xl text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1 cursor-pointer transition-colors"
             >
               Continue as Guest <ArrowRight className="w-3.5 h-3.5" />
@@ -259,8 +325,23 @@ export function LandingPage({ onSignInWithGoogle, onContinueAsGuest, isLoading }
       </main>
 
       {/* Trust Signoffs */}
-      <footer className="w-full text-center py-6 text-[11px] text-[#9A9184] border-t border-[#E8E2D9]/40 font-mono">
-        <span>StudyFlow Mistake Journal © 2026 • Encrypted Secure Cloud Backups verified by Google Firebase Auth</span>
+      <footer className="w-full text-center py-6 text-[11px] text-[#9A9184] border-t border-[#E8E2D9]/40 font-mono space-y-2">
+        <div className="flex justify-center gap-4 text-[10px] uppercase font-bold tracking-wider mb-1">
+          <button 
+            onClick={() => onOpenLegal('privacy')} 
+            className="hover:text-[#2D2A26] transition-colors cursor-pointer"
+          >
+            Privacy Policy
+          </button>
+          <span>•</span>
+          <button 
+            onClick={() => onOpenLegal('terms')} 
+            className="hover:text-[#2D2A26] transition-colors cursor-pointer"
+          >
+            Terms & Conditions
+          </button>
+        </div>
+        <div>StudyFlow Mistake Journal © 2026 • Encrypted Secure Cloud Backups verified by Google Firebase Auth</div>
       </footer>
 
     </div>

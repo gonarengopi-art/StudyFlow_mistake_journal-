@@ -35,6 +35,10 @@ interface CreateMistakeViewProps {
   addMistake: (entry: Omit<MistakeEntry, 'id' | 'dateLogged'> & { dateLogged?: string }) => string | Promise<string>;
   onNavigateToMistake: (id: string) => void;
   onNavigateToLibrary: () => void;
+  isPremium?: boolean;
+  isAdmin?: boolean;
+  mistakesCount?: number;
+  onNavigate?: (view: 'dashboard' | 'topics' | 'add' | 'insights' | 'profile' | 'upgrade') => void;
 }
 
 export function CreateMistakeView({
@@ -46,6 +50,10 @@ export function CreateMistakeView({
   addMistake,
   onNavigateToMistake,
   onNavigateToLibrary,
+  isPremium = false,
+  isAdmin = false,
+  mistakesCount = 0,
+  onNavigate,
 }: CreateMistakeViewProps) {
   
   // Primary state
@@ -358,6 +366,30 @@ export function CreateMistakeView({
         <div className="p-3 bg-red-50 border border-red-200 text-[#C17A5E] text-xs rounded-xl flex items-center gap-2">
           <AlertCircle className="w-4 h-4 text-[#C17A5E] shrink-0" />
           <span>{errorText}</span>
+        </div>
+      )}
+
+      {/* Free Tier Limit Warning Banner */}
+      {!isPremium && !isAdmin && mistakesCount >= 5 && (
+        <div className="p-5 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-4 animate-fade-in shadow-xs text-left">
+          <div className="space-y-1">
+            <h4 className="font-serif text-base font-bold text-[#2D2A26] flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-[#D98A6C] animate-pulse"></span>
+              Free Mistake Journal Limit Reached ({mistakesCount}/5)
+            </h4>
+            <p className="text-xs text-[#6B6357] leading-relaxed max-w-xl">
+              You have logged the maximum of 5 free mistakes. Upgrade to our Lifetime Supporter plan for a single flat payment of $20 to unlock unlimited journals, rich charts, and cloud-sync.
+            </p>
+          </div>
+          {onNavigate && (
+            <button
+              type="button"
+              onClick={() => onNavigate('upgrade')}
+              className="px-4 py-2.5 bg-[#D98A6C] hover:bg-[#C17A5E] text-white text-xs font-bold uppercase tracking-wider rounded-xl transition-all cursor-pointer shadow-sm hover:scale-[1.02]"
+            >
+              Unlock Unlimited Log
+            </button>
+          )}
         </div>
       )}
 
@@ -813,8 +845,12 @@ export function CreateMistakeView({
           </button>
           <button
             type="submit"
-            className="w-full sm:w-auto px-8 py-3.5 bg-[#D98A6C] hover:bg-[#C17A5E] disabled:opacity-50 text-white rounded-xl text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-all cursor-pointer shadow-sm"
-            disabled={isSubmitting}
+            className={`w-full sm:w-auto px-8 py-3.5 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-all shadow-sm ${
+              !isPremium && !isAdmin && mistakesCount >= 5
+                ? 'bg-stone-300 text-stone-500 cursor-not-allowed hover:bg-stone-300 shadow-none'
+                : 'bg-[#D98A6C] hover:bg-[#C17A5E] text-white cursor-pointer'
+            }`}
+            disabled={isSubmitting || (!isPremium && !isAdmin && mistakesCount >= 5)}
           >
             {isSubmitting ? (
               <>

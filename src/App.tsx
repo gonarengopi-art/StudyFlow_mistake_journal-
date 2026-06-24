@@ -19,6 +19,9 @@ import { QuickAddModal } from './components/QuickAddModal';
 import { LandingPage } from './components/LandingPage';
 import { OnboardingModal } from './components/OnboardingModal';
 import { NewsletterModal } from './components/NewsletterModal';
+import { FreeTierPromoModal } from './components/FreeTierPromoModal';
+import { UpgradePremiumView } from './components/UpgradePremiumView';
+import { LegalModal } from './components/LegalModal';
 
 import { Sparkles, Calendar, BookOpen, AlertCircle, X, ChevronRight, CheckCircle, GraduationCap, Eye, ZoomIn, ZoomOut, RotateCcw, Maximize2 } from 'lucide-react';
 import { INITIAL_SUBJECTS, INITIAL_TOPICS, INITIAL_SUBTOPICS, INITIAL_MISTAKES } from './initialData';
@@ -54,6 +57,7 @@ export default function App() {
   const [selectedMistakeId, setSelectedMistakeId] = useState<string | null>(null);
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
   const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
+  const [isFreePromoDismissed, setIsFreePromoDismissed] = useState(false);
 
   const isNewsletterOpen = useMemo(() => {
     // Show only to logged-in users when they haven't set their preference yet
@@ -62,6 +66,15 @@ export default function App() {
     if (!store.userDocData) return false;
     return store.userDocData.newsletterOptIn === undefined;
   }, [store.user, store.loading, store.userDocData]);
+
+  const isFreePromoOpen = useMemo(() => {
+    // Show banner popup upon login strictly to free tier users
+    if (!store.user || store.loading) return false;
+    if (store.isAdmin || store.isPremium) return false;
+    if (isFreePromoDismissed) return false;
+    if (isNewsletterOpen) return false; // let newsletter preference show first if needed
+    return true;
+  }, [store.user, store.loading, store.isAdmin, store.isPremium, isFreePromoDismissed, isNewsletterOpen]);
   
   // Custom user name persisted locally, defaulting to clean anonymous state
   const [userName, setUserName] = useState<string>(() => {
@@ -101,6 +114,15 @@ export default function App() {
   const [reviewLightboxImgUrl, setReviewLightboxImgUrl] = useState<string | null>(null);
   const [reviewLightboxZoom, setReviewLightboxZoom] = useState<number>(1);
 
+  // Legal Policy Center state handlers
+  const [isLegalModalOpen, setIsLegalModalOpen] = useState(false);
+  const [legalModalTab, setLegalModalTab] = useState<'privacy' | 'terms'>('privacy');
+
+  const handleOpenLegal = (tab: 'privacy' | 'terms') => {
+    setLegalModalTab(tab);
+    setIsLegalModalOpen(true);
+  };
+
   // Active mistakes for review
   const reviewMistakes = useMemo(() => {
     let list = store.mistakes;
@@ -120,6 +142,28 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('studyflow_username', userName);
   }, [userName]);
+
+  // Handle Stripe Payment Redirect Success
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const paymentStatus = params.get('payment');
+    
+    if (paymentStatus === 'success' && store.user) {
+      const autoUpgrade = async () => {
+        try {
+          await store.upgradeUserPremium(store.user.uid, true);
+          setCurrentView('upgrade');
+          
+          // Clean the query parameters from the URL so it looks clean and professional
+          const newUrl = window.location.origin + window.location.pathname;
+          window.history.replaceState({}, document.title, newUrl);
+        } catch (err) {
+          console.error('Auto premium upgrade failed:', err);
+        }
+      };
+      autoUpgrade();
+    }
+  }, [store.user]);
 
   // Helper to trigger navigation
   const handleNavigate = (view: ViewTab, targetSubjectId?: string) => {
@@ -236,6 +280,7 @@ export default function App() {
         onSignInWithGoogle={store.signInWithGoogle}
         onContinueAsGuest={handleContinueAsGuest}
         isLoading={store.loading}
+        onOpenLegal={handleOpenLegal}
       />
     );
   }
@@ -250,6 +295,7 @@ export default function App() {
         onActivateSearch={handleGlobalSearchQuery}
         onOpenQuickAdd={() => setIsQuickAddOpen(true)}
         userPhoto={store.user?.photoURL}
+        isPremium={store.isPremium}
       />
 
       {/* Main Content Layout container */}
@@ -333,6 +379,7 @@ export default function App() {
                     isAdmin={store.isAdmin}
                     totalLiveReadsToday={store.totalLiveReadsToday}
                     allUsers={store.allUsers}
+                    isPremium={store.isPremium}
                   />
                 );
               case 'topics':
@@ -369,6 +416,10 @@ export default function App() {
                     addMistake={store.addMistake}
                     onNavigateToMistake={handleSelectMistake}
                     onNavigateToLibrary={() => handleNavigate('insights')}
+                    isPremium={store.isPremium}
+                    isAdmin={store.isAdmin}
+                    mistakesCount={store.mistakes.length}
+                    onNavigate={handleNavigate}
                   />
                 );
               case 'insights':
@@ -407,6 +458,18 @@ export default function App() {
                     onSignInWithGoogle={store.signInWithGoogle}
                     onLogout={handleLogout}
                     onOpenOnboarding={() => setIsOnboardingOpen(true)}
+                    isPremium={store.isPremium}
+                    onNavigate={handleNavigate}
+                    onOpenLegal={handleOpenLegal}
+                  />
+                );
+              case 'upgrade':
+                return (
+                  <UpgradePremiumView
+                    user={store.user}
+                    isPremium={store.isPremium}
+                    upgradeUserPremium={store.upgradeUserPremium}
+                    onSignInWithGoogle={store.signInWithGoogle}
                   />
                 );
               case 'admin':
@@ -836,6 +899,10 @@ export default function App() {
         addTopic={store.addTopic}
         addMistake={store.addMistake}
         onNavigateToMistake={handleSelectMistake}
+        isPremium={store.isPremium}
+        isAdmin={store.isAdmin}
+        mistakesCount={store.mistakes.length}
+        onNavigate={handleNavigate}
       />
 
       {/* Interactive Onboarding Tutorial Modal overlay for new users */}
@@ -854,6 +921,14 @@ export default function App() {
         onClose={() => store.updateNewsletterPreference(false)}
         onSubscribe={(optIn) => store.updateNewsletterPreference(optIn)}
         userEmail={store.user?.email || 'N/A'}
+      />
+
+      {/* Welcome popup banner comparing Free Tier vs Lifetime Supporter for free tier logged-in users */}
+      <FreeTierPromoModal
+        isOpen={isFreePromoOpen}
+        onClose={() => setIsFreePromoDismissed(true)}
+        onUpgrade={() => handleNavigate('upgrade')}
+        mistakesCount={store.mistakes.length}
       />
 
       {/* Fullscreen Photo Lightbox overlay inside Review Sessions */}
@@ -942,6 +1017,13 @@ export default function App() {
           </div>
         </div>
       )}
+
+      {/* Global Legal Policy Center Modal Overlay */}
+      <LegalModal
+        isOpen={isLegalModalOpen}
+        onClose={() => setIsLegalModalOpen(false)}
+        defaultTab={legalModalTab}
+      />
 
       {/* Global Tab Navigation Footer */}
       <BottomNavBar

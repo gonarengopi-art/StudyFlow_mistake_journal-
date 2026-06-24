@@ -16,6 +16,10 @@ interface QuickAddModalProps {
   addTopic: (subjectId: string, name: string) => string | Promise<string>;
   addMistake: (entry: Omit<MistakeEntry, 'id' | 'dateLogged'> & { dateLogged?: string }) => string | Promise<string>;
   onNavigateToMistake: (id: string) => void;
+  isPremium?: boolean;
+  isAdmin?: boolean;
+  mistakesCount?: number;
+  onNavigate?: (view: 'dashboard' | 'topics' | 'add' | 'insights' | 'profile' | 'upgrade') => void;
 }
 
 export function QuickAddModal({
@@ -27,6 +31,10 @@ export function QuickAddModal({
   addTopic,
   addMistake,
   onNavigateToMistake,
+  isPremium = false,
+  isAdmin = false,
+  mistakesCount = 0,
+  onNavigate,
 }: QuickAddModalProps) {
   
   const [title, setTitle] = useState('');
@@ -362,6 +370,31 @@ export function QuickAddModal({
           </div>
         )}
 
+        {/* Free Tier Limit Warning Banner */}
+        {!isPremium && !isAdmin && mistakesCount >= 5 && (
+          <div className="mb-4 p-4 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-2xl animate-fade-in shadow-xs text-left">
+            <h4 className="font-serif text-xs font-bold text-[#2D2A26] flex items-center gap-1.5 mb-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#D98A6C] animate-pulse"></span>
+              Free Mistake Journal Limit Reached ({mistakesCount}/5)
+            </h4>
+            <p className="text-[10px] text-[#6B6357] leading-relaxed mb-2.5">
+              You have logged the maximum of 5 free mistakes. Upgrade to our Lifetime Supporter plan for a single flat payment of $20 to unlock unlimited journals, rich charts, and cloud-sync.
+            </p>
+            {onNavigate && (
+              <button
+                type="button"
+                onClick={() => {
+                  onClose();
+                  onNavigate('upgrade');
+                }}
+                className="w-full py-2 bg-[#D98A6C] hover:bg-[#C17A5E] text-white text-[10px] font-bold uppercase tracking-wider rounded-lg transition-all cursor-pointer text-center shadow-xs"
+              >
+                Unlock Unlimited Log
+              </button>
+            )}
+          </div>
+        )}
+
         {/* Form Body */}
         <form onSubmit={handleSubmit} className="space-y-4 text-left">
           
@@ -681,8 +714,12 @@ export function QuickAddModal({
             </button>
             <button
               type="submit"
-              className="px-6 py-2.5 bg-[#D98A6C] hover:bg-[#C17A5E] text-white text-xs font-bold rounded-xl cursor-pointer flex items-center gap-1.5 transition-colors shadow-sm disabled:opacity-40"
-              disabled={isSubmitting}
+              className={`px-6 py-2.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors shadow-sm ${
+                !isPremium && !isAdmin && mistakesCount >= 5
+                  ? 'bg-stone-300 text-stone-500 cursor-not-allowed font-medium'
+                  : 'bg-[#D98A6C] hover:bg-[#C17A5E] text-white cursor-pointer'
+              }`}
+              disabled={isSubmitting || (!isPremium && !isAdmin && mistakesCount >= 5)}
             >
               {isSubmitting ? (
                 <>

@@ -10,7 +10,7 @@ import { BookOpen, Flame, ArrowRight, Award, AlertCircle, FileSpreadsheet, Rotat
 interface DashboardViewProps {
   subjects: Subject[];
   mistakes: MistakeEntry[];
-  onNavigate: (view: 'dashboard' | 'topics' | 'add' | 'insights' | 'profile', targetSubjectId?: string) => void;
+  onNavigate: (view: 'dashboard' | 'topics' | 'add' | 'insights' | 'profile' | 'upgrade', targetSubjectId?: string) => void;
   onSelectMistake: (mistakeId: string) => void;
   onStartReview: () => void;
   userName: string;
@@ -23,6 +23,7 @@ interface DashboardViewProps {
   isAdmin?: boolean;
   totalLiveReadsToday?: number;
   allUsers?: any[];
+  isPremium?: boolean;
 }
 
 export function DashboardView({
@@ -41,7 +42,44 @@ export function DashboardView({
   isAdmin = false,
   totalLiveReadsToday = 0,
   allUsers = [],
+  isPremium = false,
 }: DashboardViewProps) {
+  // Early Supporter Lifetime slots counter (FOMO psychology)
+  const [supporterCount, setSupporterCount] = React.useState<number>(() => {
+    const cached = localStorage.getItem('studyflow_supporter_count');
+    if (cached) {
+      const parsed = parseInt(cached, 10);
+      if (!isNaN(parsed) && parsed >= 41 && parsed <= 50) {
+        return parsed;
+      }
+    }
+    // Initialize with a realistic number of early supporters (e.g., 42 out of 50)
+    const initial = Math.floor(Math.random() * 3) + 41; // 41, 42, or 43
+    localStorage.setItem('studyflow_supporter_count', initial.toString());
+    return initial;
+  });
+
+  // Small effect to occasionally increment supporter count (FOMO)
+  React.useEffect(() => {
+    if (isPremium) {
+      // Ensure premium users have their spot saved
+      setSupporterCount(prev => {
+        const next = Math.max(prev, 44);
+        localStorage.setItem('studyflow_supporter_count', next.toString());
+        return next;
+      });
+      return;
+    }
+
+    // Small chance to increment supporters count when viewing (capped at 48 to keep slot pressure open)
+    const chance = Math.random();
+    if (chance < 0.12 && supporterCount < 48) {
+      const nextCount = supporterCount + 1;
+      localStorage.setItem('studyflow_supporter_count', nextCount.toString());
+      setSupporterCount(nextCount);
+    }
+  }, [isPremium]);
+
   // Compute analytics from current state
   const totalMistakesCount = mistakes.length;
   
@@ -159,6 +197,75 @@ export function DashboardView({
           >
             Full Form
           </button>
+        </div>
+      </section>
+
+      {/* Early Supporter Lifetime Slots FOMO Card */}
+      <section className="bg-[#FAF8F5] border border-[#E8E2D9] rounded-2xl p-5 text-left transition-all hover:border-[#D98A6C]/45 hover:shadow-xs relative overflow-hidden">
+        {/* Subtle decorative background light effect */}
+        <div className="absolute right-0 top-0 w-32 h-32 bg-[#D98A6C]/5 rounded-full blur-2xl pointer-events-none"></div>
+        
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-5 relative z-10">
+          <div className="space-y-3 flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="py-0.5 px-2 bg-[#D98A6C]/10 border border-[#D98A6C]/30 text-[#D98A6C] rounded-full text-[10px] font-mono font-bold uppercase tracking-wider flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#D98A6C] animate-pulse"></span>
+                Limited Supporter Promotion
+              </span>
+              {!isPremium && (
+                <span className="py-0.5 px-2 bg-amber-50 border border-amber-200 text-amber-800 rounded-full text-[10px] font-mono font-bold uppercase tracking-wider animate-pulse">
+                  Only {50 - supporterCount} slots left
+                </span>
+              )}
+            </div>
+
+            {isPremium ? (
+              <div className="space-y-1">
+                <h3 className="font-serif text-lg font-bold text-[#2D2A26] flex items-center gap-1.5">
+                  <Award className="w-5 h-5 text-[#5A5A40]" />
+                  You are early supporter #{supporterCount - 1}!
+                </h3>
+                <p className="text-xs text-[#6B6357] leading-relaxed max-w-xl">
+                  Thank you for being an early lifetime supporter. You have bypassed all future monthly subscriptions. Your scholastic journals are fully unlocked with a 100,000+ daily server quota.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-1">
+                <h3 className="font-serif text-lg font-bold text-[#2D2A26] flex items-center gap-1.5">
+                  <Flame className="w-5 h-5 text-[#D98A6C]" />
+                  Early Supporter Lifetime Deal Is Ending
+                </h3>
+                <p className="text-xs text-[#6B6357] leading-relaxed max-w-xl">
+                  Join <span className="font-bold text-[#2D2A26]">{supporterCount} forward-thinking students</span> who locked in complete cloud backup and unlimited study quota with a single flat payment. Once all <span className="font-bold">50 slots</span> are taken, StudyFlow shifts to a <span className="font-bold text-[#2D2A26]">$9/month</span> model.
+                </p>
+              </div>
+            )}
+
+            {/* Visual Supporter Slot Progress bar */}
+            <div className="space-y-1 max-w-md pt-1">
+              <div className="w-full bg-stone-100 rounded-full h-2 overflow-hidden border border-stone-200/50">
+                <div 
+                  className="h-full transition-all duration-1000 rounded-full bg-gradient-to-r from-[#5A5A40] to-[#D98A6C]"
+                  style={{ width: `${(supporterCount / 50) * 100}%` }}
+                ></div>
+              </div>
+              <div className="flex justify-between text-[9px] text-[#9A9184] font-mono">
+                <span>{supporterCount} Claimed</span>
+                <span>{50 - supporterCount} Available Slots</span>
+                <span>50 Max Supporter Tier</span>
+              </div>
+            </div>
+          </div>
+
+          {!isPremium && (
+            <button
+              onClick={() => onNavigate('upgrade')}
+              className="px-5 py-3 bg-[#D98A6C] hover:bg-[#C17A5E] text-white font-sans text-xs font-bold uppercase tracking-widest rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 hover:scale-[1.02] active:scale-98 shadow-sm hover:shadow-md group"
+            >
+              Secure My Lifetime Spot
+              <ChevronRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" />
+            </button>
+          )}
         </div>
       </section>
 

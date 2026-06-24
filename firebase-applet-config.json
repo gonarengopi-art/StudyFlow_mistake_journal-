@@ -1,10 +1,10 @@
 {
-  "projectId": "project-18702df5-f882-4fb9-a84",
-  "appId": "1:587724938896:web:3a76eea1fee7308e40c215",
-  "apiKey": "AIzaSyDmnL2zDaTPrhkPsuwX-EuY93LutIzKuso",
-  "authDomain": "project-18702df5-f882-4fb9-a84.firebaseapp.com",
-  "firestoreDatabaseId": "ai-studio-6e96e46c-21fb-4566-98f5-1ac3ca997cff",
-  "storageBucket": "project-18702df5-f882-4fb9-a84.firebasestorage.app",
-  "messagingSenderId": "587724938896",
-  "measurementId": ""
+  "projectId": "studyflow-journal",
+  "appId": "1:1093205666856:web:41f0792ee5e5818bf9991d",
+  "apiKey": "AIzaSyDS0c6uQR4QjNfTUcmoakiPPSCJV_y-iAY",
+  "authDomain": "studyflow-journal.firebaseapp.com",
+  "firestoreDatabaseId": "",
+  "storageBucket": "studyflow-journal.firebasestorage.app",
+  "messagingSenderId": "1093205666856",
+  "measurementId": "G-7HV5YXPEKJ"
 }

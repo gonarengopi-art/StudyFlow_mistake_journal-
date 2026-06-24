@@ -19,6 +19,9 @@ interface ProfileViewProps {
   onSignInWithGoogle: () => Promise<void>;
   onLogout: () => Promise<void>;
   onOpenOnboarding?: () => void;
+  isPremium?: boolean;
+  onNavigate?: (view: any) => void;
+  onOpenLegal?: (tab: 'privacy' | 'terms') => void;
 }
 
 export function ProfileView({
@@ -33,6 +36,9 @@ export function ProfileView({
   onSignInWithGoogle,
   onLogout,
   onOpenOnboarding,
+  isPremium,
+  onNavigate,
+  onOpenLegal,
 }: ProfileViewProps) {
   const [tempName, setTempName] = useState(userName);
   const [saveSuccess, setSaveSuccess] = useState(false);
@@ -151,6 +157,44 @@ export function ProfileView({
         )}
       </div>
 
+      {/* Account Subscription Tier section */}
+      <div className="bg-white border border-[#E8E2D9] p-6 rounded-2xl shadow-sm space-y-4 text-left">
+        <h3 className="font-serif text-lg font-bold text-[#2D2A26] border-b border-[#E8E2D9]/40 pb-2 flex items-center gap-2">
+          <Award className="w-5 h-5 text-amber-500" /> Account Subscription Tier
+        </h3>
+        
+        {isPremium ? (
+          <div className="bg-gradient-to-r from-amber-500/10 via-amber-400/5 to-transparent p-5 rounded-2xl border border-amber-500/25 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="space-y-1">
+              <h4 className="font-serif text-base font-bold text-amber-800">★ StudyFlow Lifetime Plan</h4>
+              <p className="text-xs text-[#6B6357] leading-relaxed max-w-md">
+                Thank you for being an early partner! Your account has unlocked permanent premium features, unlimited activities, and deep analytics.
+              </p>
+            </div>
+            <span className="px-3.5 py-1.5 bg-amber-500 text-white rounded-xl text-xs font-bold shadow-sm whitespace-nowrap uppercase tracking-widest">
+              Active Lifetime
+            </span>
+          </div>
+        ) : (
+          <div className="bg-[#FAF8F5] p-5 rounded-2xl border border-[#E8E2D9] flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="space-y-1">
+              <h4 className="font-serif text-sm font-bold text-[#2D2A26]">Free Tier Account</h4>
+              <p className="text-xs text-[#6B6357] leading-relaxed max-w-md">
+                Your account is currently subject to a standard 1,000 daily read limit. Upgrade to the Lifetime Plan for a single payment of $20 before pricing changes to monthly subscriptions.
+              </p>
+            </div>
+            {onNavigate && (
+              <button
+                onClick={() => onNavigate('upgrade')}
+                className="px-4.5 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white rounded-xl text-xs font-bold shadow-sm whitespace-nowrap cursor-pointer transition-all"
+              >
+                Upgrade to Lifetime ($20)
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+
       {/* Profile Jumbotron Card */}
       <div className="bg-white border border-[#E8E2D9] p-6 rounded-2xl shadow-sm grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
         
@@ -166,9 +210,16 @@ export function ProfileView({
           </div>
           <div>
             <h3 className="font-serif text-lg font-bold text-[#2D2A26]">{userName}</h3>
-            <span className="text-[10px] bg-[#E8E2D9]/40 text-[#2D2A26] border border-[#E8E2D9] px-3 py-0.5 rounded-full uppercase tracking-widest font-sans font-bold">
-              {user ? 'Cloud Scholar' : 'Local Guest'}
-            </span>
+            <div className="flex flex-col items-center gap-1">
+              <span className="text-[10px] bg-[#E8E2D9]/40 text-[#2D2A26] border border-[#E8E2D9] px-3 py-0.5 rounded-full uppercase tracking-widest font-sans font-bold">
+                {user ? 'Cloud Scholar' : 'Local Guest'}
+              </span>
+              {isPremium && (
+                <span className="text-[9px] bg-amber-500/10 text-amber-700 border border-amber-500/20 px-2.5 py-0.5 rounded-full uppercase tracking-widest font-sans font-extrabold flex items-center gap-0.5 mt-1 shadow-xs">
+                  ★ Lifetime Partner
+                </span>
+              )}
+            </div>
           </div>
         </div>
 
@@ -264,9 +315,28 @@ export function ProfileView({
         </div>
 
         {/* Secure local check */}
-        <div className="flex items-center gap-2 text-xs text-[#6B6357] font-sans border-t border-[#E8E2D9]/40 pt-4">
-          <ShieldCheck className="w-4 h-4 text-[#8DA38A]" />
-          <span>Local session isolation safe. Your personal journal data conforms to client device memory bounds only.</span>
+        <div className="flex items-center justify-between text-xs text-[#6B6357] font-sans border-t border-[#E8E2D9]/40 pt-4 flex-col sm:flex-row gap-3">
+          <div className="flex items-center gap-2">
+            <ShieldCheck className="w-4 h-4 text-[#8DA38A]" />
+            <span>Local session isolation safe. Your personal journal data conforms to client device memory bounds only.</span>
+          </div>
+          {onOpenLegal && (
+            <div className="flex items-center gap-3 text-[11px] font-mono whitespace-nowrap">
+              <button 
+                onClick={() => onOpenLegal('privacy')} 
+                className="hover:text-[#2D2A26] underline transition-colors cursor-pointer"
+              >
+                Privacy Policy
+              </button>
+              <span>•</span>
+              <button 
+                onClick={() => onOpenLegal('terms')} 
+                className="hover:text-[#2D2A26] underline transition-colors cursor-pointer"
+              >
+                Terms
+              </button>
+            </div>
+          )}
         </div>
       </div>
 

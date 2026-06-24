@@ -6,7 +6,7 @@
 import React from 'react';
 import { Layout, FolderClosed, PlusCircle, BarChart3, UserCircle, ShieldCheck } from 'lucide-react';
 
-export type ViewTab = 'dashboard' | 'topics' | 'add' | 'insights' | 'profile' | 'admin';
+export type ViewTab = 'dashboard' | 'topics' | 'add' | 'insights' | 'profile' | 'admin' | 'upgrade';
 
 interface BottomNavBarProps {
   currentView: ViewTab;
