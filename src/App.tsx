@@ -276,12 +276,19 @@ export default function App() {
 
   if (!store.user && !guestMode) {
     return (
-      <LandingPage
-        onSignInWithGoogle={store.signInWithGoogle}
-        onContinueAsGuest={handleContinueAsGuest}
-        isLoading={store.loading}
-        onOpenLegal={handleOpenLegal}
-      />
+      <>
+        <LandingPage
+          onSignInWithGoogle={store.signInWithGoogle}
+          onContinueAsGuest={handleContinueAsGuest}
+          isLoading={store.loading}
+          onOpenLegal={handleOpenLegal}
+        />
+        <LegalModal
+          isOpen={isLegalModalOpen}
+          onClose={() => setIsLegalModalOpen(false)}
+          defaultTab={legalModalTab}
+        />
+      </>
     );
   }
 
@@ -470,6 +477,7 @@ export default function App() {
                     isPremium={store.isPremium}
                     upgradeUserPremium={store.upgradeUserPremium}
                     onSignInWithGoogle={store.signInWithGoogle}
+                    isAdmin={store.isAdmin}
                   />
                 );
               case 'admin':

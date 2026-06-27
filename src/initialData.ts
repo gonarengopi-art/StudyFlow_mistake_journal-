@@ -53,6 +53,12 @@ export const INITIAL_SUBTOPICS: Subtopic[] = [
   { id: 'sbt-chem-vol-acid', topicId: 'tp-chem-vol', name: 'Acid-Base Titrations' }
 ];
 
+const getRelDate = (daysAgo: number): string => {
+  const d = new Date();
+  d.setDate(d.getDate() - daysAgo);
+  return d.toISOString().split('T')[0];
+};
+
 export const INITIAL_MISTAKES: MistakeEntry[] = [
   {
     id: 'm-42',
@@ -60,7 +66,7 @@ export const INITIAL_MISTAKES: MistakeEntry[] = [
     subjectId: 'sb-phys',
     topicId: 'tp-phys-qm',
     subtopicId: undefined, // No subtopic selected
-    dateLogged: '2026-06-02',
+    dateLogged: getRelDate(0),
     imageUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCg9xCGGuZaLesmuRRH25xy9f80_rRgcSMmRJRg-TX5CdodZrZ0hpK57JumtguJJRCa_vprhJNBADBsz2d2fxnd5Zk1WTkC0IEuLScAcD3_gtJwtCWtD_aYtCfoITkhNFi90IGphvk-pnXGe_qsEck5Cq62kI-ccfNtVBrnP70Y_fHhdrcbrDvzMD8wO30HgcLU1Xuve7MPXahGcaQKZYaQdtLSVagBf7QbX9luROLHVoXe58wAZLrAxwp1jocYVoukxrJ26BxMZ8w',
     originalQuestion: 'Calculate the probability density of a particle with energy E < V₀ encountering a rectangular potential barrier of width L...',
     myAnswer: 'Complete reflection due to E < V₀ since the boundary conditions must result in zero wave function constants inside the classically forbidden zone.',
@@ -78,7 +84,7 @@ export const INITIAL_MISTAKES: MistakeEntry[] = [
     subjectId: 'sb-bio',
     topicId: 'tp-bio-gen',
     subtopicId: 'sbt-bio-gen-mono',
-    dateLogged: '2026-05-30',
+    dateLogged: getRelDate(1),
     originalQuestion: 'Predict the phenotypic ratio of offspring from a heterozygous self-pollinating pea plant for flower color (Pp x Pp).',
     myAnswer: '1:2:1 (genotypic ratio instead of phenotypic).',
     correctAnswer: '3:1 phenotypic ratio (3 Purple: 1 White).',
@@ -95,7 +101,7 @@ export const INITIAL_MISTAKES: MistakeEntry[] = [
     subjectId: 'sb-chem',
     topicId: 'tp-chem-vol',
     subtopicId: 'sbt-chem-vol-acid',
-    dateLogged: '2026-06-03',
+    dateLogged: getRelDate(2),
     originalQuestion: 'Calculate the concentration of NaOH if 25.0 cm³ of NaOH is completely neutralized by 22.4 cm³ of 0.100 mol/dm³ HCl.',
     myAnswer: '0.179 mol/dm³ due to multiplying instead of dividing, doubling target ratio stoichiometric factor.',
     correctAnswer: '0.0896 mol/dm³.',
@@ -112,7 +118,7 @@ export const INITIAL_MISTAKES: MistakeEntry[] = [
     subjectId: 'sb-ucat',
     topicId: 'tp-ucat-quant',
     subtopicId: 'sbt-ucat-qr-pct',
-    dateLogged: '2026-06-01',
+    dateLogged: getRelDate(3),
     originalQuestion: 'A population of bacteria increases by 12% every hour. If the initial population is 5,000, calculate the population after 3 hours.',
     myAnswer: '6,800 using simple interest extrapolation instead of compound (5000 * 1.36).',
     correctAnswer: '7,025 (5000 * (1.12)³).',

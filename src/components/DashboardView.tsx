@@ -146,6 +146,39 @@ export function DashboardView({
     return arr;
   }, [mistakes]);
 
+  // Calculate continuous consecutive days streak of logging mistakes
+  const currentStreak = useMemo(() => {
+    if (!mistakes || mistakes.length === 0) return 0;
+    const loggedDates = new Set(mistakes.map((m) => m && m.dateLogged).filter(Boolean));
+    if (loggedDates.size === 0) return 0;
+
+    let streak = 0;
+    const today = new Date();
+    const todayStr = today.toISOString().split('T')[0];
+
+    let checkDate = new Date(today);
+    // If user hasn't logged today yet, check if yesterday was logged so active streak continues
+    if (!loggedDates.has(todayStr)) {
+      checkDate.setDate(checkDate.getDate() - 1);
+      const yesterdayStr = checkDate.toISOString().split('T')[0];
+      if (!loggedDates.has(yesterdayStr)) {
+        return 0;
+      }
+    }
+
+    while (true) {
+      const dateStr = checkDate.toISOString().split('T')[0];
+      if (loggedDates.has(dateStr)) {
+        streak++;
+        checkDate.setDate(checkDate.getDate() - 1);
+      } else {
+        break;
+      }
+    }
+
+    return streak;
+  }, [mistakes]);
+
   // Render iconic cards based on subjects
   const getSubjectIcon = (name: string) => {
     const lower = name.toLowerCase();
@@ -481,7 +514,7 @@ export function DashboardView({
           <div>
             <div className="flex justify-between items-center border-b border-[#E8E2D9]/60 pb-3 mb-4">
               <h3 className="font-serif text-xl font-medium text-[#2D2A26] flex items-center gap-2">
-                <TrendingUp className="w-4.5 h-4.5 text-[#5A5A40]">test</TrendingUp>
+                <TrendingUp className="w-4.5 h-4.5 text-[#5A5A40]" />
                 Top Subjects by Mistake Load
               </h3>
               <span className="font-sans text-[10px] font-bold text-[#9A9184] tracking-widest uppercase bg-[#F5F2ED] px-2.5 py-1 rounded">Ranked #1 - #5</span>
@@ -568,7 +601,7 @@ export function DashboardView({
             <div>
               <span className="font-sans text-xs font-bold tracking-widest text-[#9A9184] uppercase">CURRENT STREAK</span>
               <p className="font-serif text-4xl font-semibold mt-2 flex items-baseline gap-1 text-[#2D2A26]">
-                12 Days
+                {currentStreak} {currentStreak === 1 ? 'Day' : 'Days'}
                 <Flame className="w-6 h-6 text-[#D98A6C] fill-[#D98A6C] animate-pulse ml-2 inline-block self-center align-middle" />
               </p>
               <p className="text-xs text-[#6B6357] mt-2">Consistent daily reflection drives 8x better exam performance.</p>

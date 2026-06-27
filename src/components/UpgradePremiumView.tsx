@@ -11,13 +11,15 @@ interface UpgradePremiumViewProps {
   isPremium: boolean;
   upgradeUserPremium: (userId?: string, setPremium?: boolean) => Promise<void>;
   onSignInWithGoogle: () => Promise<void>;
+  isAdmin?: boolean;
 }
 
 export function UpgradePremiumView({
   user,
   isPremium,
   upgradeUserPremium,
-  onSignInWithGoogle
+  onSignInWithGoogle,
+  isAdmin = false
 }: UpgradePremiumViewProps) {
   const stripePaymentLink = (import.meta as any).env?.VITE_STRIPE_PAYMENT_LINK || '';
   const [loading, setLoading] = useState(false);
@@ -154,16 +156,18 @@ export function UpgradePremiumView({
             )}
           </div>
 
-          <div className="pt-4 flex justify-center gap-3">
-            <button
-              onClick={handleResetForTesting}
-              disabled={loading}
-              className="px-4 py-2 bg-white hover:bg-stone-100 text-stone-700 border border-stone-200 rounded-xl text-xs font-bold transition-all flex items-center gap-1 cursor-pointer disabled:opacity-50"
-              title="Click to revert to free plan to test the checkout experience again"
-            >
-              <RotateCcw className="w-3.5 h-3.5 text-stone-400" /> Revert to Free (Test Mode)
-            </button>
-          </div>
+          {isAdmin && (
+            <div className="pt-4 flex justify-center gap-3">
+              <button
+                onClick={handleResetForTesting}
+                disabled={loading}
+                className="px-4 py-2 bg-white hover:bg-stone-100 text-stone-700 border border-stone-200 rounded-xl text-xs font-bold transition-all flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                title="Admin only: Click to revert to free plan to test the checkout experience again"
+              >
+                <RotateCcw className="w-3.5 h-3.5 text-stone-400" /> Revert to Free (Admin Test)
+              </button>
+            </div>
+          )}
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
@@ -204,7 +208,7 @@ export function UpgradePremiumView({
             
             <div className="bg-white border-2 border-[#5A5A40] p-6 rounded-3xl shadow-md text-left space-y-5 relative overflow-hidden">
               <div className="absolute right-0 top-0 bg-[#5A5A40] text-white font-bold uppercase tracking-widest text-[8px] px-3.5 py-1.5 rounded-bl-xl shadow-xs">
-                Test Gateway
+                Secure Checkout
               </div>
 
               <div className="space-y-1">
@@ -368,22 +372,24 @@ export function UpgradePremiumView({
               )}
             </div>
 
-            {/* Quick action block for testing */}
-            <div className="bg-amber-500/5 border border-amber-500/25 p-4 rounded-2xl text-left space-y-2">
-              <span className="text-[9px] font-extrabold text-amber-700 uppercase tracking-widest flex items-center gap-1">
-                <Sparkles className="w-3 h-3 fill-current" /> Developer Test Panel
-              </span>
-              <p className="text-[11px] text-stone-600 leading-relaxed">
-                Click below to instantly flag your Firestore account as Premium without typing mock cards.
-              </p>
-              <button
-                onClick={handleInstantUpgradeForTesting}
-                disabled={loading || !user}
-                className="w-full py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-[10px] font-bold uppercase tracking-wider transition-colors cursor-pointer disabled:opacity-40"
-              >
-                Instant Developer Upgrade
-              </button>
-            </div>
+            {/* Quick action block for testing (admin only) */}
+            {isAdmin && (
+              <div className="bg-amber-500/5 border border-amber-500/25 p-4 rounded-2xl text-left space-y-2">
+                <span className="text-[9px] font-extrabold text-amber-700 uppercase tracking-widest flex items-center gap-1">
+                  <Sparkles className="w-3 h-3 fill-current" /> Admin Test Panel
+                </span>
+                <p className="text-[11px] text-stone-600 leading-relaxed">
+                  Click below to instantly flag your Firestore account as Premium without typing test cards.
+                </p>
+                <button
+                  onClick={handleInstantUpgradeForTesting}
+                  disabled={loading || !user}
+                  className="w-full py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-[10px] font-bold uppercase tracking-wider transition-colors cursor-pointer disabled:opacity-40"
+                >
+                  Instant Admin Upgrade
+                </button>
+              </div>
+            )}
 
             <div className="text-center">
               <span className="text-[10px] text-stone-400 font-medium inline-flex items-center gap-1">

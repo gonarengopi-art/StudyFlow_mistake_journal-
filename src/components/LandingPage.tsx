@@ -121,8 +121,9 @@ export function LandingPage({ onSignInWithGoogle, onContinueAsGuest, isLoading, 
               ? 'bg-red-50/70 border-red-300 shadow-sm shadow-red-100' 
               : 'bg-[#FAF8F5] border-[#E8E2D9] hover:border-[#2D2A26]/30'
           }`}>
-            <label className="flex items-start gap-3 cursor-pointer select-none">
+            <div className="flex items-start gap-3 select-none">
               <input
+                id="consent-checkbox"
                 type="checkbox"
                 checked={hasAccepted}
                 onChange={(e) => {
@@ -132,7 +133,7 @@ export function LandingPage({ onSignInWithGoogle, onContinueAsGuest, isLoading, 
                 className="mt-0.5 w-4.5 h-4.5 rounded border-[#E8E2D9] text-[#2D2A26] focus:ring-[#2D2A26] cursor-pointer accent-[#2D2A26]"
               />
               <span className="text-[11.5px] leading-relaxed text-[#6B6357]">
-                I acknowledge and agree to StudyFlow's{' '}
+                <label htmlFor="consent-checkbox" className="cursor-pointer">I acknowledge and agree to StudyFlow's </label>
                 <button
                   type="button"
                   onClick={(e) => {
@@ -158,7 +159,7 @@ export function LandingPage({ onSignInWithGoogle, onContinueAsGuest, isLoading, 
                 </button>
                 .
               </span>
-            </label>
+            </div>
             {showErrorHint && (
               <p className="text-[10px] text-red-600 font-bold tracking-tight mt-2 flex items-center gap-1 animate-fade-in">
                 ⚠️ Please accept the Terms & Conditions and Privacy Policy to continue.

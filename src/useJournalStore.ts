@@ -25,6 +25,33 @@ import {
   getDocFromServer
 } from 'firebase/firestore';
 
+const normalizeSampleDates = (items: any[]): any[] => {
+  if (!items || !Array.isArray(items) || items.length === 0) return items || [];
+  const staleDates = ['2026-06-02', '2026-05-30', '2026-06-03', '2026-06-01'];
+  const sampleMap: Record<string, number> = {
+    'm-42': 0,
+    'm-bio-1': 1,
+    'm-chem-1': 2,
+    'm-ucat-1': 3,
+  };
+  const hasStaleSample = items.some((m) => m && sampleMap[m.id] !== undefined && staleDates.includes(m.dateLogged));
+  if (!hasStaleSample) return items;
+
+  const today = new Date();
+  const getRel = (days: number) => {
+    const d = new Date(today);
+    d.setDate(d.getDate() - days);
+    return d.toISOString().split('T')[0];
+  };
+
+  return items.map((m) => {
+    if (m && sampleMap[m.id] !== undefined && staleDates.includes(m.dateLogged)) {
+      return { ...m, dateLogged: getRel(sampleMap[m.id]) };
+    }
+    return m;
+  });
+};
+
 export enum OperationType {
   CREATE = 'create',
   UPDATE = 'update',
@@ -267,7 +294,7 @@ export function useJournalStore() {
         setSubjects(storedSubjects ? JSON.parse(storedSubjects) : []);
         setTopics(storedTopics ? JSON.parse(storedTopics) : []);
         setSubtopics(storedSubtopics ? JSON.parse(storedSubtopics) : []);
-        setMistakes(storedMistakes ? JSON.parse(storedMistakes) : []);
+        setMistakes(storedMistakes ? normalizeSampleDates(JSON.parse(storedMistakes)) : []);
       } catch (e) {
         console.error('Failed to load local data', e);
         setSubjects([]);
@@ -391,14 +418,15 @@ export function useJournalStore() {
         snapshot.forEach((doc) => {
           items.push(doc.data() as MistakeEntry);
         });
-        setMistakes(items);
-        localStorage.setItem(`studyflow_mistakes_${user.uid}`, JSON.stringify(items));
+        const normalizedItems = normalizeSampleDates(items);
+        setMistakes(normalizedItems);
+        localStorage.setItem(`studyflow_mistakes_${user.uid}`, JSON.stringify(normalizedItems));
         recordReads(snapshot.size);
       },
       (error) => {
         try {
           const cached = localStorage.getItem(`studyflow_mistakes_${user.uid}`);
-          if (cached) setMistakes(JSON.parse(cached));
+          if (cached) setMistakes(normalizeSampleDates(JSON.parse(cached)));
         } catch (e) {
           console.error('Failed to load cached mistakes', e);
         }
