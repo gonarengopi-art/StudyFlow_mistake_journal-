@@ -12,7 +12,6 @@ import {
   TrendingUp, 
   Database, 
   ShieldCheck, 
-  ArrowRight, 
   Lock,
   Focus,
   BrainCircuit,
@@ -21,14 +20,13 @@ import {
 
 interface LandingPageProps {
   onSignInWithGoogle: () => Promise<void>;
-  onContinueAsGuest: () => void;
   isLoading: boolean;
   onOpenLegal: (tab: 'privacy' | 'terms') => void;
 }
 
 type FeatureTab = 'log' | 'structure' | 'review';
 
-export function LandingPage({ onSignInWithGoogle, onContinueAsGuest, isLoading, onOpenLegal }: LandingPageProps) {
+export function LandingPage({ onSignInWithGoogle, isLoading, onOpenLegal }: LandingPageProps) {
   const [activeTab, setActiveTab] = useState<FeatureTab>('log');
   const [isSigningIn, setIsSigningIn] = useState(false);
   const [hasAccepted, setHasAccepted] = useState(false);
@@ -49,14 +47,6 @@ export function LandingPage({ onSignInWithGoogle, onContinueAsGuest, isLoading, 
     }
   };
 
-  const handleContinueGuest = () => {
-    if (!hasAccepted) {
-      setShowErrorHint(true);
-      return;
-    }
-    onContinueAsGuest();
-  };
-
   return (
     <div className="min-h-screen bg-[#FDFCF8] text-[#2D2A26] font-sans flex flex-col justify-between">
       
@@ -73,12 +63,6 @@ export function LandingPage({ onSignInWithGoogle, onContinueAsGuest, isLoading, 
         </div>
         
         <div className="flex items-center gap-4">
-          <button 
-            onClick={handleContinueGuest}
-            className="text-xs font-semibold text-[#6B6357] hover:text-[#2D2A26] transition-colors"
-          >
-            Guest Sandbox
-          </button>
           <button
             onClick={handleSignIn}
             disabled={isSigningIn || isLoading}
@@ -167,11 +151,11 @@ export function LandingPage({ onSignInWithGoogle, onContinueAsGuest, isLoading, 
             )}
           </div>
 
-          <div className="pt-2 sm:flex items-center gap-3 space-y-3 sm:space-y-0">
+          <div className="pt-2 flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
             <button
               onClick={handleSignIn}
               disabled={isSigningIn || isLoading}
-              className="w-full sm:w-auto px-6 py-3.5 bg-[#4285F4] hover:bg-[#357AE8] focus:ring-2 focus:ring-[#4285F4]/30 text-white rounded-xl text-xs font-bold font-sans uppercase tracking-wider flex items-center justify-center gap-2.5 transition-all shadow-md cursor-pointer"
+              className="w-full sm:w-auto px-6 py-3.5 bg-[#4285F4] hover:bg-[#357AE8] focus:ring-2 focus:ring-[#4285F4]/30 text-white rounded-xl text-xs font-bold font-sans uppercase tracking-wider flex items-center justify-center gap-2.5 transition-all shadow-md cursor-pointer hover:scale-[1.01] active:scale-99"
             >
               <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
                 <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
@@ -180,13 +164,6 @@ export function LandingPage({ onSignInWithGoogle, onContinueAsGuest, isLoading, 
                 <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
               </svg>
               {isSigningIn ? 'Connecting...' : 'Secure Sign-In with Google'}
-            </button>
-
-            <button
-              onClick={handleContinueGuest}
-              className="w-full sm:w-auto px-6 py-3.5 bg-white border border-[#E8E2D9] hover:bg-[#FDFCF8] hover:border-[#2D2A26] rounded-xl text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1 cursor-pointer transition-colors"
-            >
-              Continue as Guest <ArrowRight className="w-3.5 h-3.5" />
             </button>
           </div>
 

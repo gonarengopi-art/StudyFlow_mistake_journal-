@@ -31,29 +31,9 @@ import { INITIAL_SUBJECTS, INITIAL_TOPICS, INITIAL_SUBTOPICS, INITIAL_MISTAKES }
 
 export default function App() {
   const store = useJournalStore();
-  
-  // Guest mode state to allow testing of memory dashboard offline
-  const [guestMode, setGuestMode] = useState<boolean>(() => {
-    return localStorage.getItem('studyflow_guest_mode') === 'true';
-  });
-
-  // Reset guest mode if user authenticates successfully
-  useEffect(() => {
-    if (store.user) {
-      setGuestMode(false);
-      localStorage.removeItem('studyflow_guest_mode');
-    }
-  }, [store.user]);
-
-  const handleContinueAsGuest = () => {
-    setGuestMode(true);
-    localStorage.setItem('studyflow_guest_mode', 'true');
-  };
 
   const handleLogout = async () => {
     await store.logout();
-    setGuestMode(false);
-    localStorage.removeItem('studyflow_guest_mode');
   };
 
   const [currentView, setCurrentView] = useState<ViewTab>('dashboard');
@@ -77,15 +57,15 @@ export default function App() {
     return localStorage.getItem('studyflow_username') || 'New Scholar';
   });
 
-  // Automatically trigger onboarding check when user accesses dashboard (either via guest mode or google auth login)
+  // Automatically trigger onboarding check when user accesses dashboard via google auth login
   useEffect(() => {
-    if (store.user || guestMode) {
+    if (store.user) {
       const onboarded = localStorage.getItem('studyflow_onboarded');
       if (onboarded !== 'true') {
         setIsOnboardingOpen(true);
       }
     }
-  }, [store.user, guestMode]);
+  }, [store.user]);
 
   // Dynamically resolve display name based on Firebase Auth identity status
   const resolvedUserName = useMemo(() => {
@@ -276,12 +256,11 @@ export default function App() {
     );
   }
 
-  if (!store.user && !guestMode) {
+  if (!store.user) {
     return (
       <>
         <LandingPage
           onSignInWithGoogle={store.signInWithGoogle}
-          onContinueAsGuest={handleContinueAsGuest}
           isLoading={store.loading}
           onOpenLegal={handleOpenLegal}
         />
@@ -339,25 +318,6 @@ export default function App() {
             >
               Upgrade / Review limits
             </a>
-          </div>
-        )}
-
-        {!store.user && guestMode && (
-          <div className="bg-[#E6E1FF]/40 border border-[#d2cbfa]/60 p-4 rounded-2xl mb-6 text-xs text-[#2D2A26] flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-fade-in font-sans">
-            <div className="flex items-center gap-2">
-              <span className="p-1 bg-[#E6E1FF] text-[#2D2A26] rounded-md shrink-0">
-                <Sparkles className="w-3.5 h-3.5" />
-              </span>
-              <span>
-                <strong>Guest Sandbox Mode:</strong> Your mistake memory is stored locally on this machine. Sign in to sync.
-              </span>
-            </div>
-            <button
-              onClick={store.signInWithGoogle}
-              className="px-3.5 py-1.5 bg-[#2D2A26] hover:bg-[#4A453E] text-white font-bold rounded-lg shrink-0 text-[11px] uppercase tracking-wider self-start sm:self-auto cursor-pointer"
-            >
-              Link Google Account
-            </button>
           </div>
         )}
 

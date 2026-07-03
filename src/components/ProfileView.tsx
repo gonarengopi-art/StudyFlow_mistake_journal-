@@ -301,7 +301,7 @@ export function ProfileView({
             <h3 className="font-serif text-lg font-bold text-[#2D2A26]">{userName}</h3>
             <div className="flex flex-col items-center gap-1">
               <span className="text-[10px] bg-[#E8E2D9]/40 text-[#2D2A26] border border-[#E8E2D9] px-3 py-0.5 rounded-full uppercase tracking-widest font-sans font-bold">
-                {user ? 'Cloud Scholar' : 'Local Guest'}
+                Cloud Scholar
               </span>
               {isPremium && (
                 <span className="text-[9px] bg-amber-500/10 text-amber-700 border border-amber-500/20 px-2.5 py-0.5 rounded-full uppercase tracking-widest font-sans font-extrabold flex items-center gap-0.5 mt-1 shadow-xs">

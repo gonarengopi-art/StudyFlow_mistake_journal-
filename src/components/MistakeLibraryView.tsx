@@ -34,6 +34,18 @@ export function MistakeLibraryView({
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'title'>('newest');
   const [mistakeToDelete, setMistakeToDelete] = useState<MistakeEntry | null>(null);
+  const [showMobileFilters, setShowMobileFilters] = useState(false);
+
+  // Active filter count logic for badge indication
+  const activeFiltersCount = useMemo(() => {
+    let count = 0;
+    if (selectedSubjectId) count++;
+    if (selectedTopicId) count++;
+    if (selectedSubtopicId) count++;
+    if (selectedStatus) count++;
+    if (selectedCategory) count++;
+    return count;
+  }, [selectedSubjectId, selectedTopicId, selectedSubtopicId, selectedStatus, selectedCategory]);
 
   // Categories list
   const allCategories: MistakeCategory[] = [
@@ -174,8 +186,34 @@ export function MistakeLibraryView({
           />
         </div>
 
+        {/* Collapsible Mobile Filters Button */}
+        <div className="flex items-center justify-between md:hidden border-t border-[#E8E2D9]/60 pt-3">
+          <button
+            type="button"
+            onClick={() => setShowMobileFilters(!showMobileFilters)}
+            className="flex items-center gap-2 px-3 py-1.5 bg-[#FAF8F5] border border-[#E8E2D9] rounded-xl text-xs font-semibold text-[#2D2A26] hover:bg-[#F5F2ED] transition-colors cursor-pointer"
+          >
+            <Filter className="w-3.5 h-3.5 text-[#5A5A40]" />
+            <span>{showMobileFilters ? 'Hide Advanced Filters' : 'Show Advanced Filters'}</span>
+            {activeFiltersCount > 0 && (
+              <span className="bg-[#D98A6C] text-white rounded-full w-4 h-4 flex items-center justify-center text-[10px] font-bold">
+                {activeFiltersCount}
+              </span>
+            )}
+          </button>
+          
+          {activeFiltersCount > 0 && (
+            <button
+              onClick={handleResetFilters}
+              className="text-xs text-[#D98A6C] font-bold hover:underline cursor-pointer"
+            >
+              Clear filters
+            </button>
+          )}
+        </div>
+
         {/* Filters Matrix */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+        <div className={`${showMobileFilters ? 'block' : 'hidden'} md:grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 pt-2 md:pt-0 space-y-3 sm:space-y-0`}>
           
           {/* Subject Filter */}
           <div className="space-y-1">

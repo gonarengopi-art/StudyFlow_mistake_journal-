@@ -28,7 +28,7 @@ export function BottomNavBar({ currentView, onNavigate, isAdmin }: BottomNavBarP
   }
 
   return (
-    <nav className="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 pb-4 pt-2 bg-white/95 backdrop-blur-md shadow-lg rounded-t-2xl border-t border-[#E8E2D9] max-w-7xl mx-auto left-1/2 -translate-x-1/2">
+    <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md md:max-w-7xl z-50 flex justify-around items-center px-2 sm:px-4 pb-3 sm:pb-4 pt-2 bg-white/95 backdrop-blur-md shadow-lg rounded-t-2xl border-t border-[#E8E2D9]">
       {tabs.map((tab) => {
         const Icon = tab.icon;
         const isActive = currentView === tab.id;

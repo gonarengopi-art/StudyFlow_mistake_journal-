@@ -244,6 +244,14 @@ export function DashboardView({
             </button>
           )}
           <button
+            onClick={onStartReview}
+            disabled={readyForReviewCount === 0}
+            className={`px-4.5 py-3.5 bg-[#D98A6C] hover:bg-[#C17A5E] text-[#FDFCF8] rounded-full font-sans font-bold text-xs uppercase tracking-wider flex items-center gap-1.5 transition-all cursor-pointer shadow-sm ${readyForReviewCount === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
+            title="Start a rapid study session on pending mistakes"
+          >
+            <Flame className="w-4 h-4 text-white fill-white" /> Quick Review ({readyForReviewCount})
+          </button>
+          <button
             onClick={() => onNavigate('add')}
             className="px-4.5 py-3.5 bg-[#F5F2ED] hover:bg-[#E8E2D9] text-[#2D2A26] border border-[#E8E2D9] rounded-full font-sans font-bold text-xs uppercase tracking-wider flex items-center gap-1.5 transition-all cursor-pointer"
           >

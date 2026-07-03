@@ -19,42 +19,42 @@ interface HeaderProps {
 
 export function Header({ userName, onNavigate, onActivateSearch, onOpenQuickAdd, onOpenHistoryLog, userPhoto, isPremium }: HeaderProps) {
   return (
-    <header className="fixed top-0 left-0 w-full z-50 bg-[#FDFCF8]/95 border-b border-[#E8E2D9] px-4 md:px-8 h-16 flex justify-between items-center backdrop-blur-md">
-      <div className="flex items-center gap-3.5">
+    <header className="fixed top-0 left-0 w-full z-50 bg-[#FDFCF8]/95 border-b border-[#E8E2D9] px-3 sm:px-6 md:px-8 h-16 flex justify-between items-center backdrop-blur-md">
+      <div className="flex items-center gap-2 sm:gap-3.5">
         <button
           onClick={() => onNavigate('profile')}
-          className="p-1.5 hover:bg-[#F5F2ED] rounded-full text-[#5A5A40] transition-colors cursor-pointer"
+          className="p-1.5 hover:bg-[#F5F2ED] rounded-full text-[#5A5A40] transition-colors cursor-pointer hidden sm:block"
           title="Menu Profile"
         >
           <Menu className="w-5 h-5 text-[#5A5A40]" />
         </button>
         
         {/* Visual typographic Pairing serif and sans */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2">
           <h1
             onClick={() => onNavigate('dashboard')}
-            className="font-serif font-black tracking-tight text-[#2D2A26] cursor-pointer select-none flex items-baseline gap-1.5"
+            className="font-serif font-black tracking-tight text-[#2D2A26] cursor-pointer select-none flex items-baseline gap-1"
           >
-            <span className="text-2xl">StudyFlow</span>
-            <span className="font-sans text-xs font-normal tracking-wide text-[#9A9184] whitespace-nowrap hidden sm:inline">mistake journal</span>
+            <span className="text-xl sm:text-2xl">StudyFlow</span>
+            <span className="font-sans text-[10px] sm:text-xs font-normal tracking-wide text-[#9A9184] whitespace-nowrap hidden sm:inline">mistake journal</span>
           </h1>
           {isPremium && (
-            <span className="inline-flex items-center gap-0.5 px-2 py-0.5 bg-[#D4AF37]/15 text-[#B8901C] border border-[#D4AF37]/25 text-[8.5px] font-sans font-extrabold uppercase rounded-full tracking-wider animate-fade-in shrink-0">
-              ★ Lifetime
+            <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-[#D4AF37]/15 text-[#B8901C] border border-[#D4AF37]/25 text-[8.5px] font-sans font-extrabold uppercase rounded-full tracking-wider animate-fade-in shrink-0">
+              ★ Premium
             </span>
           )}
         </div>
       </div>
 
-      <div className="flex items-center gap-2 sm:gap-3.5">
+      <div className="flex items-center gap-1 sm:gap-2.5">
         {/* Go Lifetime Paywall Shortcut Button */}
         {!isPremium && (
           <button
             onClick={() => onNavigate('upgrade')}
-            className="flex items-center gap-1 px-3 py-1.5 sm:px-4 sm:py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-sans text-[10px] sm:text-xs font-bold uppercase tracking-wider rounded-full transition-all cursor-pointer shadow-sm shrink-0"
+            className="w-9 h-9 sm:w-auto sm:h-auto flex items-center justify-center sm:justify-start gap-1 p-0 sm:px-3.5 sm:py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-sans text-xs font-bold uppercase tracking-wider rounded-full transition-all cursor-pointer shadow-sm shrink-0"
             title="Unlock Lifetime Premium Plan"
           >
-            ★ Go Lifetime
+            <span>★</span> <span className="hidden sm:inline">Go Lifetime</span>
           </button>
         )}
 
@@ -62,10 +62,10 @@ export function Header({ userName, onNavigate, onActivateSearch, onOpenQuickAdd,
         {onOpenQuickAdd && (
           <button
             onClick={onOpenQuickAdd}
-            className="flex items-center gap-1 px-3 py-1.5 sm:px-4 sm:py-2 bg-[#D98A6C] hover:bg-[#C17A5E] text-white font-sans text-[10px] sm:text-xs font-bold uppercase tracking-wider rounded-full transition-colors cursor-pointer shadow-sm shrink-0"
+            className="w-9 h-9 sm:w-auto sm:h-auto flex items-center justify-center sm:justify-start gap-1 p-0 sm:px-3.5 sm:py-2 bg-[#D98A6C] hover:bg-[#C17A5E] text-white font-sans text-xs font-bold uppercase tracking-wider rounded-full transition-colors cursor-pointer shadow-sm shrink-0"
             title="Rapidly Log Error Entry"
           >
-            <span className="text-sm font-semibold sm:mr-0.5">+</span> Quick Add
+            <span className="text-lg font-semibold sm:text-sm leading-none">+</span> <span className="hidden sm:inline">Quick Add</span>
           </button>
         )}
 
@@ -73,17 +73,17 @@ export function Header({ userName, onNavigate, onActivateSearch, onOpenQuickAdd,
         {onOpenHistoryLog && (
           <button
             onClick={onOpenHistoryLog}
-            className="flex items-center gap-1 px-3 py-1.5 sm:px-4 sm:py-2 bg-[#FAF8F5] hover:bg-[#FAF8F5] text-[#2D2A26] border border-[#E8E2D9] font-sans text-[10px] sm:text-xs font-bold uppercase tracking-wider rounded-full transition-all cursor-pointer shadow-sm shrink-0"
+            className="w-9 h-9 sm:w-auto sm:h-auto flex items-center justify-center sm:justify-start gap-1 p-0 sm:px-3.5 sm:py-2 bg-[#FAF8F5] hover:bg-[#F5F2ED] text-[#2D2A26] border border-[#E8E2D9] font-sans text-xs font-bold uppercase tracking-wider rounded-full transition-all cursor-pointer shadow-sm shrink-0"
             title="Open Log History"
           >
-            <History className="w-3.5 h-3.5 text-[#5A5A40]" /> Log History
+            <History className="w-3.5 h-3.5 text-[#5A5A40]" /> <span className="hidden sm:inline">Log History</span>
           </button>
         )}
 
         {/* Search Activator */}
         <button
           onClick={onActivateSearch}
-          className="p-1.5 hover:bg-[#F5F2ED] rounded-full text-[#4A453E] transition-colors cursor-pointer focus:outline-none"
+          className="w-9 h-9 flex items-center justify-center hover:bg-[#F5F2ED] rounded-full text-[#4A453E] transition-colors cursor-pointer focus:outline-none"
           title="Global Query Search"
         >
           <Search className="w-5 h-5 text-[#4A453E]" />
