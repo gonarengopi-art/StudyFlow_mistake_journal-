@@ -72,21 +72,21 @@ export function FreeTierPromoModal({
               <div className="p-3 bg-stone-50 rounded-xl border border-stone-200/60 space-y-1.5">
                 <div className="flex justify-between text-xs font-medium text-stone-700">
                   <span>Mistake Journals Logged</span>
-                  <span className={mistakesCount >= 5 ? 'text-red-600 font-bold' : 'text-stone-900'}>{mistakesCount} / 5 Max</span>
+                  <span className={mistakesCount >= 50 ? 'text-red-600 font-bold' : 'text-stone-900'}>{mistakesCount} / 50 Max</span>
                 </div>
                 <div className="w-full bg-stone-200 rounded-full h-1.5 overflow-hidden">
                   <div 
-                    className={`h-full transition-all duration-500 ${mistakesCount >= 5 ? 'bg-red-500' : 'bg-stone-600'}`}
-                    style={{ width: `${Math.min(100, (mistakesCount / 5) * 100)}%` }}
+                    className={`h-full transition-all duration-500 ${mistakesCount >= 50 ? 'bg-red-500' : 'bg-stone-600'}`}
+                    style={{ width: `${Math.min(100, (mistakesCount / 50) * 100)}%` }}
                   />
                 </div>
-                <p className="text-[10px] text-stone-500">Free accounts can log up to 5 lifetime mistakes.</p>
+                <p className="text-[10px] text-stone-500">Free accounts can log up to 50 lifetime mistakes.</p>
               </div>
 
               <ul className="space-y-2.5 text-xs text-stone-600 pt-1">
                 <li className="flex items-start gap-2">
                   <ShieldAlert className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-                  <span>Capped at **maximum 5 mistake journals**</span>
+                  <span>Capped at **maximum 50 mistake journals**</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <ShieldAlert className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
@@ -140,7 +140,7 @@ export function FreeTierPromoModal({
               <ul className="space-y-2.5 text-xs text-[#2D2A26] font-medium pt-1">
                 <li className="flex items-start gap-2">
                   <CheckCircle2 className="w-4 h-4 text-[#5A5A40] shrink-0 mt-0.5" />
-                  <span>**Unlimited mistake journals** (no 5-entry cap)</span>
+                  <span>**Unlimited mistake journals** (no 50-entry cap)</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <CheckCircle2 className="w-4 h-4 text-[#5A5A40] shrink-0 mt-0.5" />

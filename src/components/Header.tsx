@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import { Menu, Search, User, Sparkles } from 'lucide-react';
+import { Menu, Search, User, Sparkles, History } from 'lucide-react';
 import { ViewTab } from './BottomNavBar';
 
 interface HeaderProps {
@@ -12,11 +12,12 @@ interface HeaderProps {
   onNavigate: (view: ViewTab) => void;
   onActivateSearch: () => void;
   onOpenQuickAdd?: () => void;
+  onOpenHistoryLog?: () => void;
   userPhoto?: string | null;
   isPremium?: boolean;
 }
 
-export function Header({ userName, onNavigate, onActivateSearch, onOpenQuickAdd, userPhoto, isPremium }: HeaderProps) {
+export function Header({ userName, onNavigate, onActivateSearch, onOpenQuickAdd, onOpenHistoryLog, userPhoto, isPremium }: HeaderProps) {
   return (
     <header className="fixed top-0 left-0 w-full z-50 bg-[#FDFCF8]/95 border-b border-[#E8E2D9] px-4 md:px-8 h-16 flex justify-between items-center backdrop-blur-md">
       <div className="flex items-center gap-3.5">
@@ -65,6 +66,17 @@ export function Header({ userName, onNavigate, onActivateSearch, onOpenQuickAdd,
             title="Rapidly Log Error Entry"
           >
             <span className="text-sm font-semibold sm:mr-0.5">+</span> Quick Add
+          </button>
+        )}
+
+        {/* History Log Button */}
+        {onOpenHistoryLog && (
+          <button
+            onClick={onOpenHistoryLog}
+            className="flex items-center gap-1 px-3 py-1.5 sm:px-4 sm:py-2 bg-[#FAF8F5] hover:bg-[#FAF8F5] text-[#2D2A26] border border-[#E8E2D9] font-sans text-[10px] sm:text-xs font-bold uppercase tracking-wider rounded-full transition-all cursor-pointer shadow-sm shrink-0"
+            title="Open Log History"
+          >
+            <History className="w-3.5 h-3.5 text-[#5A5A40]" /> Log History
           </button>
         )}
 

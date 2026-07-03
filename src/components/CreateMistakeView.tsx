@@ -370,15 +370,15 @@ export function CreateMistakeView({
       )}
 
       {/* Free Tier Limit Warning Banner */}
-      {!isPremium && !isAdmin && mistakesCount >= 5 && (
+      {!isPremium && !isAdmin && mistakesCount >= 50 && (
         <div className="p-5 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-4 animate-fade-in shadow-xs text-left">
           <div className="space-y-1">
             <h4 className="font-serif text-base font-bold text-[#2D2A26] flex items-center gap-1.5">
               <span className="w-2 h-2 rounded-full bg-[#D98A6C] animate-pulse"></span>
-              Free Mistake Journal Limit Reached ({mistakesCount}/5)
+              Free Mistake Journal Limit Reached ({mistakesCount}/50)
             </h4>
             <p className="text-xs text-[#6B6357] leading-relaxed max-w-xl">
-              You have logged the maximum of 5 free mistakes. Upgrade to our Lifetime Supporter plan for a single flat payment of $20 to unlock unlimited journals, rich charts, and cloud-sync.
+              You have logged the maximum of 50 free mistakes. Upgrade to our Lifetime Supporter plan for a single flat payment of $20 to unlock unlimited journals, rich charts, and cloud-sync.
             </p>
           </div>
           {onNavigate && (
@@ -846,11 +846,11 @@ export function CreateMistakeView({
           <button
             type="submit"
             className={`w-full sm:w-auto px-8 py-3.5 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-all shadow-sm ${
-              !isPremium && !isAdmin && mistakesCount >= 5
+              !isPremium && !isAdmin && mistakesCount >= 50
                 ? 'bg-stone-300 text-stone-500 cursor-not-allowed hover:bg-stone-300 shadow-none'
                 : 'bg-[#D98A6C] hover:bg-[#C17A5E] text-white cursor-pointer'
             }`}
-            disabled={isSubmitting || (!isPremium && !isAdmin && mistakesCount >= 5)}
+            disabled={isSubmitting || (!isPremium && !isAdmin && mistakesCount >= 50)}
           >
             {isSubmitting ? (
               <>

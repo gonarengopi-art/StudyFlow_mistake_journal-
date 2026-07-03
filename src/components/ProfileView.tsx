@@ -3,9 +3,10 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Subject, Topic, Subtopic, MistakeEntry } from '../types';
-import { User, Award, CheckCircle, Clock, RotateCcw, Save, Trash2, ShieldCheck, Mail, BrainCircuit } from 'lucide-react';
+import { User, Award, CheckCircle, Clock, RotateCcw, Save, Trash2, ShieldCheck, Mail, BrainCircuit, Trophy, Lock, Sparkles, Share2 } from 'lucide-react';
+import { AchievementShareModal, Achievement } from './AchievementShareModal';
 
 interface ProfileViewProps {
   userName: string;
@@ -60,6 +61,94 @@ export function ProfileView({
   };
 
   const [profileActionConfirm, setProfileActionConfirm] = useState<'reset' | 'clear' | null>(null);
+  const [selectedAchievement, setSelectedAchievement] = useState<any | null>(null);
+
+  const achievementsList = useMemo(() => [
+    {
+      id: 'pioneer',
+      title: 'Pioneer Scholar',
+      description: 'Logged your very first mistake entry in StudyFlow. The journey of a thousand masteries begins here!',
+      emoji: '🚀',
+      badgeTitle: 'Pioneer Scholar Badge',
+      color: 'bg-emerald-500/10 border-emerald-500/20 text-emerald-700',
+      glow: 'shadow-emerald-500/10',
+      text: 'text-emerald-400',
+      border: 'border-emerald-500/30',
+      ring: 'ring-emerald-500/20',
+      isUnlocked: totalMistakeCount >= 1,
+      requirement: 'Log at least 1 mistake'
+    },
+    {
+      id: 'retainer',
+      title: 'Deep Retainer',
+      description: 'Logged 5 or more mistakes in your study database. Committing to tracking errors is key to improvement.',
+      emoji: '📚',
+      badgeTitle: 'Deep Retainer Badge',
+      color: 'bg-violet-500/10 border-violet-500/20 text-violet-700',
+      glow: 'shadow-violet-500/10',
+      text: 'text-violet-400',
+      border: 'border-violet-500/30',
+      ring: 'ring-violet-500/20',
+      isUnlocked: totalMistakeCount >= 5,
+      requirement: 'Log 5 or more mistakes'
+    },
+    {
+      id: 'sentinel',
+      title: 'Recall Sentinel',
+      description: 'Mastered 3 mistake entries during active recall practice sessions inside the Review Arena.',
+      emoji: '🛡️',
+      badgeTitle: 'Recall Sentinel Badge',
+      color: 'bg-cyan-500/10 border-cyan-500/20 text-cyan-700',
+      glow: 'shadow-cyan-500/10',
+      text: 'text-cyan-400',
+      border: 'border-cyan-500/30',
+      ring: 'ring-cyan-500/20',
+      isUnlocked: masteredCount >= 3,
+      requirement: 'Master 3 or more mistakes'
+    },
+    {
+      id: 'sage',
+      title: 'Fidelity Sage',
+      description: 'Mastered 10 or more mistake entries! You have successfully re-wired your neural pathways for these concepts.',
+      emoji: '🏆',
+      badgeTitle: 'Fidelity Sage Badge',
+      color: 'bg-amber-500/10 border-amber-500/20 text-amber-700',
+      glow: 'shadow-amber-500/10',
+      text: 'text-amber-400',
+      border: 'border-amber-500/30',
+      ring: 'ring-amber-500/20',
+      isUnlocked: masteredCount >= 10,
+      requirement: 'Master 10 or more mistakes'
+    },
+    {
+      id: 'architect',
+      title: 'Academic Architect',
+      description: 'Mapped out 3 or more custom subjects to construct a clean, comprehensive study structure.',
+      emoji: '🏗️',
+      badgeTitle: 'Academic Architect Badge',
+      color: 'bg-blue-500/10 border-blue-500/20 text-blue-700',
+      glow: 'shadow-blue-500/10',
+      text: 'text-blue-400',
+      border: 'border-blue-500/30',
+      ring: 'ring-blue-500/20',
+      isUnlocked: totalSubCount >= 3,
+      requirement: 'Create 3 or more subjects'
+    },
+    {
+      id: 'explorer',
+      title: 'Knowledge Explorer',
+      description: 'Categorized 5 or more distinct study topics. Organizing sub-fields ensures crisp contextual retrieval.',
+      emoji: '🗺️',
+      badgeTitle: 'Knowledge Explorer Badge',
+      color: 'bg-pink-500/10 border-pink-500/20 text-pink-700',
+      glow: 'shadow-pink-500/10',
+      text: 'text-pink-400',
+      border: 'border-pink-500/30',
+      ring: 'ring-pink-500/20',
+      isUnlocked: totalTopCount >= 5,
+      requirement: 'Create 5 or more topics'
+    }
+  ], [totalMistakeCount, masteredCount, totalSubCount, totalTopCount]);
 
   const handleResetTrigger = () => {
     setProfileActionConfirm('reset');
@@ -272,6 +361,90 @@ export function ProfileView({
 
       </div>
 
+      {/* Scholar Achievements & Milestones */}
+      <div className="bg-white border border-[#E8E2D9] p-6 rounded-2xl shadow-sm space-y-5 text-left">
+        <div className="flex items-center justify-between border-b border-[#E8E2D9]/40 pb-2">
+          <h3 className="font-serif text-lg font-bold text-[#2D2A26] flex items-center gap-2">
+            <Trophy className="w-5 h-5 text-amber-500" /> Scholar Achievements & Badges
+          </h3>
+          <span className="text-xs font-mono font-bold text-[#5A5A40] bg-[#5A5A40]/10 px-2.5 py-0.5 rounded-full">
+            {achievementsList.filter(a => a.isUnlocked).length} / {achievementsList.length} Unlocked
+          </span>
+        </div>
+
+        <p className="text-xs text-[#6B6357] leading-relaxed">
+          Unlock honorary badges by committing mistakes to your journal, organizing subjects, and practicing active recall. Unlocked badges can be shared as downloadable certified credentials.
+        </p>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {achievementsList.map((ach) => {
+            return (
+              <div 
+                key={ach.id}
+                className={`p-4.5 rounded-xl border transition-all duration-300 relative overflow-hidden flex items-start gap-4 ${
+                  ach.isUnlocked 
+                    ? 'bg-[#FAF8F5]/80 border-[#E8E2D9] shadow-sm hover:border-[#5A5A40]/40' 
+                    : 'bg-[#F5F2ED]/25 border-[#E8E2D9]/50 opacity-60'
+                }`}
+              >
+                {/* Visual lock status */}
+                {!ach.isUnlocked && (
+                  <div className="absolute top-2 right-2 text-[#9A9184]" title="Locked Achievement">
+                    <Lock className="w-3.5 h-3.5" />
+                  </div>
+                )}
+                
+                {/* Badge Emoji Circle */}
+                <div className={`w-12 h-12 rounded-full shrink-0 flex items-center justify-center text-2xl relative ${
+                  ach.isUnlocked 
+                    ? 'bg-white border border-[#E8E2D9] shadow-xs' 
+                    : 'bg-stone-200 border border-stone-300 grayscale'
+                }`}>
+                  {ach.emoji}
+                </div>
+
+                <div className="flex-1 min-w-0 space-y-1 text-left">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <h4 className={`text-sm font-bold font-serif leading-tight ${ach.isUnlocked ? 'text-[#2D2A26]' : 'text-stone-500 line-through'}`}>
+                      {ach.title}
+                    </h4>
+                    {ach.isUnlocked && (
+                      <span className="text-[8px] bg-emerald-100 text-emerald-800 border border-emerald-200 px-1.5 py-0.2 rounded-full font-sans uppercase font-bold tracking-wider">
+                        Unlocked
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-[#6B6357] leading-relaxed line-clamp-2">
+                    {ach.description}
+                  </p>
+                  
+                  {/* Progress / Requirement Indicator */}
+                  <div className="pt-2 flex items-center justify-between gap-2">
+                    <span className="text-[10px] font-sans text-stone-400 font-medium">
+                      Req: {ach.requirement}
+                    </span>
+                    
+                    {ach.isUnlocked ? (
+                      <button
+                        type="button"
+                        onClick={() => setSelectedAchievement(ach)}
+                        className="text-[10px] bg-[#5A5A40] hover:bg-[#4D4D36] text-white px-2.5 py-1 rounded-lg font-bold transition-all flex items-center gap-1 cursor-pointer hover:scale-[1.02]"
+                      >
+                        <Share2 className="w-2.5 h-2.5" /> Share Badge
+                      </button>
+                    ) : (
+                      <span className="text-[9px] bg-stone-100 text-stone-500 border border-stone-200 px-2 py-0.5 rounded-md font-mono uppercase font-semibold">
+                        Locked
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
       {/* Database Session Administration Boxes */}
       <div className="bg-white border border-[#E8E2D9] p-6 rounded-2xl shadow-sm space-y-6">
         <h3 className="font-serif text-lg font-bold text-[#2D2A26] border-b border-[#E8E2D9]/40 pb-2">
@@ -388,6 +561,20 @@ export function ProfileView({
             </div>
           </div>
         </div>
+      )}
+
+      {selectedAchievement && (
+        <AchievementShareModal
+          isOpen={!!selectedAchievement}
+          onClose={() => setSelectedAchievement(null)}
+          achievement={selectedAchievement}
+          stats={{
+            totalMistakes: totalMistakeCount,
+            masteredCount: masteredCount,
+            totalSubjects: totalSubCount,
+            totalTopics: totalTopCount
+          }}
+        />
       )}
 
     </div>

@@ -4,11 +4,12 @@
  */
 
 import React, { useMemo } from 'react';
-import { Subject, MistakeEntry } from '../types';
-import { BookOpen, Flame, ArrowRight, Award, AlertCircle, FileSpreadsheet, RotateCcw, Plus, Sparkles, TrendingUp, ChevronRight, HelpCircle } from 'lucide-react';
+import { Subject, Topic, MistakeEntry } from '../types';
+import { BookOpen, Flame, ArrowRight, Award, AlertCircle, FileSpreadsheet, RotateCcw, Plus, Sparkles, TrendingUp, ChevronRight, HelpCircle, Trophy, Lock } from 'lucide-react';
 
 interface DashboardViewProps {
   subjects: Subject[];
+  topics?: Topic[];
   mistakes: MistakeEntry[];
   onNavigate: (view: 'dashboard' | 'topics' | 'add' | 'insights' | 'profile' | 'upgrade', targetSubjectId?: string) => void;
   onSelectMistake: (mistakeId: string) => void;
@@ -28,6 +29,7 @@ interface DashboardViewProps {
 
 export function DashboardView({
   subjects,
+  topics = [],
   mistakes,
   onNavigate,
   onSelectMistake,
@@ -178,6 +180,23 @@ export function DashboardView({
 
     return streak;
   }, [mistakes]);
+
+  // Calculate unlocked achievements count dynamically based on current student data
+  const unlockedAchievementsCount = useMemo(() => {
+    let count = 0;
+    const totalMistakes = mistakes.length;
+    const masteredCount = mistakes.filter((m) => m.status === 'Mastered').length;
+    const totalSubjects = subjects.length;
+    const totalTopics = topics.length;
+
+    if (totalMistakes >= 1) count++; // Pioneer
+    if (totalMistakes >= 5) count++; // Deep Retainer
+    if (masteredCount >= 3) count++; // Recall Sentinel
+    if (masteredCount >= 10) count++; // Fidelity Sage
+    if (totalSubjects >= 3) count++; // Academic Architect
+    if (totalTopics >= 5) count++; // Knowledge Explorer
+    return count;
+  }, [mistakes, subjects, topics]);
 
   // Render iconic cards based on subjects
   const getSubjectIcon = (name: string) => {
@@ -615,6 +634,33 @@ export function DashboardView({
               <Flame className="w-4 h-4 text-[#FDFCF8] fill-[#FDFCF8]" />
               Quick Review ({readyForReviewCount})
             </button>
+          </div>
+
+          {/* Achievements & Badges Teaser Card */}
+          <div 
+            onClick={() => onNavigate('profile')}
+            className="bg-white border border-[#E8E2D9] rounded-2xl p-5 space-y-3 cursor-pointer group transition-all duration-300 hover:border-[#5A5A40]/40 hover:shadow-xs relative overflow-hidden text-left"
+          >
+            {/* Subtle light background decoration */}
+            <div className="absolute right-0 top-0 w-20 h-20 bg-amber-500/5 rounded-full blur-xl pointer-events-none"></div>
+            
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-bold text-[#5A5A40] uppercase tracking-widest block flex items-center gap-1">
+                <Trophy className="w-3.5 h-3.5 text-amber-500" /> Academic Achievements
+              </span>
+              <span className="text-[10px] font-mono font-bold text-[#2D2A26] bg-[#FAF8F5] border border-[#E8E2D9] px-2 py-0.5 rounded-full">
+                {unlockedAchievementsCount} / 6 Earned
+              </span>
+            </div>
+            
+            <p className="text-xs text-[#6B6357] leading-relaxed">
+              You've unlocked <strong>{unlockedAchievementsCount} out of 6</strong> academic milestone badges! Check out your custom sharing certificates inside your profile tab.
+            </p>
+            
+            <div className="pt-1 flex items-center justify-between text-xs text-[#5A5A40] font-bold">
+              <span>View Milestone Badges</span>
+              <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+            </div>
           </div>
 
           {/* Quick Info Box */}

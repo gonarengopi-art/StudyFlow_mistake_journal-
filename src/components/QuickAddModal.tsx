@@ -371,14 +371,14 @@ export function QuickAddModal({
         )}
 
         {/* Free Tier Limit Warning Banner */}
-        {!isPremium && !isAdmin && mistakesCount >= 5 && (
+        {!isPremium && !isAdmin && mistakesCount >= 50 && (
           <div className="mb-4 p-4 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-2xl animate-fade-in shadow-xs text-left">
             <h4 className="font-serif text-xs font-bold text-[#2D2A26] flex items-center gap-1.5 mb-1">
               <span className="w-1.5 h-1.5 rounded-full bg-[#D98A6C] animate-pulse"></span>
-              Free Mistake Journal Limit Reached ({mistakesCount}/5)
+              Free Mistake Journal Limit Reached ({mistakesCount}/50)
             </h4>
             <p className="text-[10px] text-[#6B6357] leading-relaxed mb-2.5">
-              You have logged the maximum of 5 free mistakes. Upgrade to our Lifetime Supporter plan for a single flat payment of $20 to unlock unlimited journals, rich charts, and cloud-sync.
+              You have logged the maximum of 50 free mistakes. Upgrade to our Lifetime Supporter plan for a single flat payment of $20 to unlock unlimited journals, rich charts, and cloud-sync.
             </p>
             {onNavigate && (
               <button
@@ -715,11 +715,11 @@ export function QuickAddModal({
             <button
               type="submit"
               className={`px-6 py-2.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors shadow-sm ${
-                !isPremium && !isAdmin && mistakesCount >= 5
+                !isPremium && !isAdmin && mistakesCount >= 50
                   ? 'bg-stone-300 text-stone-500 cursor-not-allowed font-medium'
                   : 'bg-[#D98A6C] hover:bg-[#C17A5E] text-white cursor-pointer'
               }`}
-              disabled={isSubmitting || (!isPremium && !isAdmin && mistakesCount >= 5)}
+              disabled={isSubmitting || (!isPremium && !isAdmin && mistakesCount >= 50)}
             >
               {isSubmitting ? (
                 <>

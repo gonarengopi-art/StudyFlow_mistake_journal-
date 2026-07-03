@@ -733,8 +733,16 @@ export function useJournalStore() {
 
   // MISTAKE OPERATIONS
   const addMistake = async (entry: Omit<MistakeEntry, 'id' | 'dateLogged'> & { dateLogged?: string }): Promise<string> => {
-    if (!isPremium && !isAdmin && mistakes.length >= 5) {
-      throw new Error("Free tier limit reached: You can only log up to 5 mistakes. Please upgrade to our Lifetime Supporter plan to unlock unlimited mistakes!");
+    if (!isPremium && !isAdmin) {
+      if (mistakes.length >= 50) {
+        throw new Error("Free tier limit reached: You can only log up to 50 mistakes. Please upgrade to our Lifetime Supporter plan to unlock unlimited mistakes!");
+      }
+
+      const targetDate = entry.dateLogged || new Date().toISOString().split('T')[0];
+      const dailyCount = mistakes.filter(m => m.dateLogged === targetDate).length;
+      if (dailyCount >= 5) {
+        throw new Error("You've reached your maximum logs for the day. Please try again in 24 hours.");
+      }
     }
 
     const newId = `m-${Date.now()}`;
