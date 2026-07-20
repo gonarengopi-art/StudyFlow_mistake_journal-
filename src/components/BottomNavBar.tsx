@@ -38,6 +38,7 @@ export function BottomNavBar({ currentView, onNavigate, isAdmin }: BottomNavBarP
           return (
             <button
               key={tab.id}
+              id={`nav-tab-${tab.id}`}
               onClick={() => onNavigate(tab.id)}
               className="flex flex-col items-center justify-center text-[#2D2A26] hover:text-[#5A5A40] transition-colors focus:outline-none cursor-pointer"
               title="Log New Mistake Entry"
@@ -51,6 +52,7 @@ export function BottomNavBar({ currentView, onNavigate, isAdmin }: BottomNavBarP
         return (
           <button
             key={tab.id}
+            id={`nav-tab-${tab.id}`}
             onClick={() => onNavigate(tab.id)}
             className={`flex flex-col items-center justify-center py-1.5 px-3.5 transition-all text-xs font-sans rounded-xl focus:outline-none cursor-pointer ${isActive ? 'text-[#2D2A26] font-semibold bg-[#E8E2D9] scale-95' : 'text-[#9A9184] hover:text-[#2D2A26] font-medium'}`}
           >

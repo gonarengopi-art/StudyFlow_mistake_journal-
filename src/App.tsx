@@ -25,6 +25,7 @@ import { UpgradePremiumView } from './components/UpgradePremiumView';
 import { LegalModal } from './components/LegalModal';
 import { ReviewArenaModal } from './components/ReviewArenaModal';
 import { HistoryLogModal } from './components/HistoryLogModal';
+import { MistakeCategory } from './types';
 
 import { Sparkles, Calendar, BookOpen, AlertCircle, X, ChevronRight, CheckCircle, GraduationCap, Eye, ZoomIn, ZoomOut, RotateCcw, Maximize2 } from 'lucide-react';
 import { INITIAL_SUBJECTS, INITIAL_TOPICS, INITIAL_SUBTOPICS, INITIAL_MISTAKES } from './initialData';
@@ -84,6 +85,7 @@ export default function App() {
   const [isAnswerRevealed, setIsAnswerRevealed] = useState(false);
   const [reviewFilterSubjectId, setReviewFilterSubjectId] = useState<string | 'all'>('all');
   const [reviewFilterTopicId, setReviewFilterTopicId] = useState<string | 'all'>('all');
+  const [reviewFilterCategories, setReviewFilterCategories] = useState<MistakeCategory[]>([]);
   const [isReviewSetupActive, setIsReviewSetupActive] = useState<boolean>(true);
   const [includeMasteredInReview, setIncludeMasteredInReview] = useState<boolean>(false);
   const [scratchpadText, setScratchpadText] = useState<string>('');
@@ -168,9 +170,10 @@ export default function App() {
   };
 
   // Quick review mechanics support targeted custom review setups
-  const handleStartQuickReview = (subjectId?: string, topicId?: string) => {
+  const handleStartQuickReview = (subjectId?: string, topicId?: string, categories?: MistakeCategory[]) => {
     setScratchpadText('');
     setIncludeMasteredInReview(false);
+    setReviewFilterCategories(categories || []);
     
     if (subjectId) {
       setReviewFilterSubjectId(subjectId);
@@ -179,12 +182,12 @@ export default function App() {
         setIsReviewSetupActive(false); // Start instantly for a specific topic deeplink!
       } else {
         setReviewFilterTopicId('all');
-        setIsReviewSetupActive(true); // Let user review and click start
+        setIsReviewSetupActive(categories && categories.length > 0 ? false : true);
       }
     } else {
       setReviewFilterSubjectId('all');
       setReviewFilterTopicId('all');
-      setIsReviewSetupActive(true); // Full selector menu
+      setIsReviewSetupActive(categories && categories.length > 0 ? false : true);
     }
     
     setReviewIndex(0);
@@ -332,6 +335,7 @@ export default function App() {
             editMistake={store.editMistake}
             deleteMistake={store.deleteMistake}
             onGoBack={clearSelectedMistakeAndGoBack}
+            onStartReview={handleStartQuickReview}
           />
         ) : (
           /* Normal Primary Tab Router Views */
@@ -482,6 +486,7 @@ export default function App() {
           editMistake={store.editMistake}
           initialSubjectId={reviewFilterSubjectId}
           initialTopicId={reviewFilterTopicId}
+          initialCategories={reviewFilterCategories}
           isPremium={store.isPremium}
           isAdmin={store.isAdmin}
           onNavigate={handleNavigate}
@@ -522,6 +527,12 @@ export default function App() {
         setUserName={setUserName}
         addSubject={store.addSubject}
         addTopic={store.addTopic}
+        currentView={currentView}
+        onNavigate={handleNavigate}
+        subjects={store.subjects}
+        topics={store.topics}
+        mistakes={store.mistakes}
+        isReviewOpen={isReviewOpen}
       />
 
       {/* Newsletter opt-in modal prompt for registered logged-in users */}

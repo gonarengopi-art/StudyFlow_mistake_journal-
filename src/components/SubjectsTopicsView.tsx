@@ -236,6 +236,7 @@ export function SubjectsTopicsView({
               Subjects
             </h3>
             <button
+              id="subjects-add-btn"
               onClick={() => setShowAddSubject(!showAddSubject)}
               className="p-1 px-2.5 bg-[#5A5A40]/10 text-[#5A5A40] rounded-full hover:bg-[#5A5A40]/20 transition-colors font-sans text-xs font-bold flex items-center gap-1 cursor-pointer"
             >
@@ -247,6 +248,7 @@ export function SubjectsTopicsView({
           {showAddSubject && (
             <form onSubmit={handleCreateSubject} className="mb-4 bg-stone-50 p-3 rounded-xl border border-gray-100 animate-slide-down">
               <input
+                id="subjects-add-input"
                 type="text"
                 placeholder="e.g. Cognitive Biology"
                 value={newSubjectName}
@@ -391,6 +393,7 @@ export function SubjectsTopicsView({
                     </button>
                   )}
                   <button
+                    id="topics-add-btn"
                     type="button"
                     onClick={() => setShowAddTopic(!showAddTopic)}
                     className="px-4 py-2.5 bg-[#D98A6C] text-[#FDFCF8] text-xs font-semibold font-sans rounded-full hover:bg-[#C17A5E] transition-colors flex items-center gap-1.5 cursor-pointer font-bold"
@@ -434,6 +437,7 @@ export function SubjectsTopicsView({
             <div className="flex-1">
               <label className="block text-[10px] font-bold text-[#5A5A40] uppercase mb-1">Create Topic for {selectedSubject?.name}</label>
               <input
+                id="topics-add-input"
                 type="text"
                 placeholder="e.g. Dihybrid Cross Inheritance"
                 value={newTopicName}

@@ -28,7 +28,7 @@ import {
   Copy,
   ExternalLink
 } from 'lucide-react';
-import { MistakeEntry, Subject, Topic, Subtopic } from '../types';
+import { MistakeEntry, Subject, Topic, Subtopic, MistakeCategory } from '../types';
 
 // Native Web Audio synth engine for rewarding chimes without external assets
 const playSound = (type: 'success' | 'reveal' | 'complete' | 'streak' | 'error', isMuted: boolean) => {
@@ -140,6 +140,7 @@ interface ReviewArenaModalProps {
   editMistake: (id: string, updates: Partial<MistakeEntry>) => Promise<void>;
   initialSubjectId?: string;
   initialTopicId?: string;
+  initialCategories?: MistakeCategory[];
   isPremium: boolean;
   isAdmin: boolean;
   onNavigate: (view: any) => void;
@@ -163,6 +164,7 @@ export function ReviewArenaModal({
   editMistake,
   initialSubjectId = 'all',
   initialTopicId = 'all',
+  initialCategories = [],
   isPremium,
   isAdmin,
   onNavigate,
@@ -170,6 +172,7 @@ export function ReviewArenaModal({
   // Setup variables
   const [reviewFilterSubjectId, setReviewFilterSubjectId] = useState<string>(initialSubjectId);
   const [reviewFilterTopicId, setReviewFilterTopicId] = useState<string>(initialTopicId);
+  const [reviewFilterCategories, setReviewFilterCategories] = useState<MistakeCategory[]>(initialCategories);
   const [includeMasteredInReview, setIncludeMasteredInReview] = useState<boolean>(false);
   const [isSetupActive, setIsSetupActive] = useState<boolean>(true);
 
@@ -222,7 +225,9 @@ export function ReviewArenaModal({
     if (isOpen) {
       setReviewFilterSubjectId(initialSubjectId);
       setReviewFilterTopicId(initialTopicId);
-      setIsSetupActive(initialSubjectId === 'all' || initialTopicId === 'all');
+      setReviewFilterCategories(initialCategories);
+      const hasCategories = initialCategories && initialCategories.length > 0;
+      setIsSetupActive(hasCategories ? false : (initialSubjectId === 'all' || initialTopicId === 'all'));
       setReviewIndex(0);
       setIsAnswerRevealed(false);
       setScratchpadText('');
@@ -237,7 +242,7 @@ export function ReviewArenaModal({
       setBadgeCopySuccess(false);
       setIsBadgeDownloading(false);
     }
-  }, [isOpen, initialSubjectId, initialTopicId]);
+  }, [isOpen, initialSubjectId, initialTopicId, initialCategories]);
 
   // Persist preferences
   useEffect(() => {
@@ -278,8 +283,11 @@ export function ReviewArenaModal({
     if (reviewFilterTopicId !== 'all') {
       list = list.filter((m) => m.topicId === reviewFilterTopicId);
     }
+    if (reviewFilterCategories && reviewFilterCategories.length > 0) {
+      list = list.filter((m) => m.categories.some((cat) => reviewFilterCategories.includes(cat)));
+    }
     return list;
-  }, [mistakes, reviewFilterSubjectId, reviewFilterTopicId, includeMasteredInReview, isSetupActive]);
+  }, [mistakes, reviewFilterSubjectId, reviewFilterTopicId, reviewFilterCategories, includeMasteredInReview, isSetupActive]);
 
   // Active recall card
   const currentMistake = targetMistakes[reviewIndex];
@@ -1196,6 +1204,11 @@ export function ReviewArenaModal({
                   <span className="text-[10px] font-semibold text-[#5A5A40] bg-[#5A5A40]/10 px-2 py-0.5 rounded">
                     Topic: {topics.find((t) => t.id === currentMistake?.topicId)?.name}
                   </span>
+                  {reviewFilterCategories && reviewFilterCategories.length > 0 && (
+                    <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-900 px-2.5 py-0.5 rounded-full animate-pulse flex items-center gap-1">
+                      <Sparkles className="w-3 h-3" /> Similar Focus: {reviewFilterCategories.join(', ')}
+                    </span>
+                  )}
                 </div>
 
                 <span className={`text-[9px] font-bold ml-auto px-2 py-0.5 rounded-full ${currentMistake?.status === 'Mastered' ? 'bg-[#8DA38A]' : currentMistake?.status === 'Reviewing' ? 'bg-[#D98A6C]' : 'bg-[#EAEAF2] text-[#2D2A26]'}`}>

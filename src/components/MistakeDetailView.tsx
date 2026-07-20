@@ -16,6 +16,7 @@ interface MistakeDetailViewProps {
   editMistake: (id: string, fields: Partial<MistakeEntry>) => void;
   deleteMistake: (id: string) => void;
   onGoBack: () => void;
+  onStartReview?: (subjectId?: string, topicId?: string, categories?: MistakeCategory[]) => void;
 }
 
 export function MistakeDetailView({
@@ -27,6 +28,7 @@ export function MistakeDetailView({
   editMistake,
   deleteMistake,
   onGoBack,
+  onStartReview,
 }: MistakeDetailViewProps) {
   
   // Find current mistake entry
@@ -284,13 +286,17 @@ export function MistakeDetailView({
     });
   };
 
-  // Mock Practice State
+  // Practice simulation and targeted review arena trigger
   const [practiceStatus, setPracticeStatus] = useState<string | null>(null);
   const triggerPractice = () => {
+    if (!mistake) return;
     setPracticeStatus('loading');
     setTimeout(() => {
       setPracticeStatus('loaded');
-    }, 1200);
+      if (onStartReview) {
+        onStartReview(mistake.subjectId, undefined, mistake.categories);
+      }
+    }, 1000);
   };
 
   if (!mistake) {

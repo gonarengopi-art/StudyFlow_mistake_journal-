@@ -512,6 +512,7 @@ export function CreateMistakeView({
                   Original Question / Prompt <span className="text-[#D98A6C]">*</span>
                 </label>
                 <textarea
+                  id="create-mistake-question"
                   rows={2}
                   placeholder="Paste equation instructions, MCQs, or source prompt..."
                   value={originalQuestion}
@@ -528,6 +529,7 @@ export function CreateMistakeView({
                     My Incorrect Response
                   </label>
                   <input
+                    id="create-mistake-my-answer"
                     type="text"
                     placeholder="Enter what you put down"
                     value={myAnswer}
@@ -541,6 +543,7 @@ export function CreateMistakeView({
                     Correct Answer <span className="text-[#D98A6C]">*</span>
                   </label>
                   <input
+                    id="create-mistake-correct-answer"
                     type="text"
                     placeholder="Enter correct solution card"
                     value={correctAnswer}
@@ -698,6 +701,7 @@ export function CreateMistakeView({
                 Reflection: What did I misunderstand? <span className="text-[#D98A6C]">*</span>
               </label>
               <textarea
+                id="create-mistake-reflection"
                 rows={3}
                 placeholder="e.g. Underestimated constant multiplier, forgot temperature kelvin calibration."
                 value={reflection}
@@ -844,6 +848,7 @@ export function CreateMistakeView({
             Discard & Exit
           </button>
           <button
+            id="create-mistake-submit"
             type="submit"
             className={`w-full sm:w-auto px-8 py-3.5 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-all shadow-sm ${
               !isPremium && !isAdmin && mistakesCount >= 50

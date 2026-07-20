@@ -244,6 +244,7 @@ export function DashboardView({
             </button>
           )}
           <button
+            id="dashboard-quick-review"
             onClick={onStartReview}
             disabled={readyForReviewCount === 0}
             className={`px-4.5 py-3.5 bg-[#D98A6C] hover:bg-[#C17A5E] text-[#FDFCF8] rounded-full font-sans font-bold text-xs uppercase tracking-wider flex items-center gap-1.5 transition-all cursor-pointer shadow-sm ${readyForReviewCount === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
