@@ -5,7 +5,9 @@
 
 import React, { useState, useMemo } from 'react';
 import { Subject, Topic, Subtopic, MistakeEntry, MistakeCategory, ReviewStatus } from '../types';
-import { ChevronLeft, Share2, Eye, FileImage, Sparkles, PencilLine, Trash2, Calendar, BookOpen, AlertTriangle, CheckSquare, Save, X, Lightbulb, FileText, ArrowRight, Maximize2, ZoomIn, ZoomOut, RotateCcw, Camera, Upload } from 'lucide-react';
+import { ChevronLeft, Share2, Eye, FileImage, Sparkles, PencilLine, Trash2, Calendar, BookOpen, AlertTriangle, CheckSquare, Save, X, Lightbulb, FileText, ArrowRight, Maximize2, ZoomIn, ZoomOut, RotateCcw, Camera, Upload, Check } from 'lucide-react';
+import { AiClonePracticeModal } from './AiClonePracticeModal';
+import { copyToClipboard } from '../utils/clipboard';
 
 interface MistakeDetailViewProps {
   mistakeId: string;
@@ -45,6 +47,8 @@ export function MistakeDetailView({
 
   // Is editing state
   const [isEditing, setIsEditing] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
+  const [isAiPracticeOpen, setIsAiPracticeOpen] = useState(false);
 
   // Active image index
   const [activeImageIndex, setActiveImageIndex] = useState(0);
@@ -65,6 +69,7 @@ export function MistakeDetailView({
   const startEditCamera = async () => {
     try {
       setEditCameraActive(true);
+      setEditError(null);
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }
       });
@@ -77,7 +82,7 @@ export function MistakeDetailView({
       }, 120);
     } catch (err) {
       console.error("Camera access error:", err);
-      alert("Could not access camera. Please check your browser's site permissions for camera access.");
+      setEditError("Could not access camera. Please check your browser's site permissions for camera access.");
       setEditCameraActive(false);
     }
   };
@@ -93,7 +98,7 @@ export function MistakeDetailView({
   const addEditImage = (url: string) => {
     setEditImageUrls(prev => {
       if (prev.length >= 10) {
-        alert("Maximum of 10 photos can be added per mistake log.");
+        setEditError("Maximum of 10 photos can be added per mistake log.");
         return prev;
       }
       return [...prev, url];
@@ -118,11 +123,11 @@ export function MistakeDetailView({
 
   const handleEditFileReader = (file: File) => {
     if (!file.type.startsWith('image/')) {
-      alert('Please upload an image file (PNG, JPG, BMP, WEBP, etc.).');
+      setEditError('Please upload an image file (PNG, JPG, BMP, WEBP, etc.).');
       return;
     }
     if (file.size > 2.5 * 1024 * 1024) {
-      alert('This image exceeds 2.5MB. Please upload a smaller image.');
+      setEditError('This image exceeds 2.5MB. Please upload a smaller image.');
       return;
     }
     const reader = new FileReader();
@@ -203,13 +208,14 @@ export function MistakeDetailView({
   // Form submission handler
   const handleSaveEdit = (e: React.FormEvent) => {
     e.preventDefault();
+    setEditError(null);
     if (!editSubjectId || !editTopicId) {
-      alert('Please fill out the subject and topic fields.');
+      setEditError('Please fill out the subject and topic fields.');
       return;
     }
 
     if (editCategories.length === 0) {
-      alert('Please select at least one Mistake Category Tag.');
+      setEditError('Please select at least one Mistake Category Tag.');
       return;
     }
 
@@ -251,10 +257,16 @@ export function MistakeDetailView({
     onGoBack();
   };
 
+  const [copiedShare, setCopiedShare] = useState(false);
+
   // Copy sample reference link
-  const handleShare = () => {
-    navigator.clipboard.writeText(`${window.location.host}/mistake/${mistakeId}`);
-    alert('Mock share link copied to clipboard!');
+  const handleShare = async () => {
+    const url = `${window.location.origin}/#mistake-${mistakeId}`;
+    const ok = await copyToClipboard(url);
+    if (ok) {
+      setCopiedShare(true);
+      setTimeout(() => setCopiedShare(false), 2500);
+    }
   };
 
   // Filtering subtopics and topics during editing
@@ -353,7 +365,10 @@ export function MistakeDetailView({
             <div className="flex gap-2">
               <button
                 type="button"
-                onClick={() => setIsEditing(false)}
+                onClick={() => {
+                  setIsEditing(false);
+                  setEditError(null);
+                }}
                 className="px-4 py-2 bg-[#F5F2ED] hover:bg-[#E8E2D9] text-[#4A453E] text-xs font-bold rounded-full cursor-pointer transition-colors"
               >
                 Cancel
@@ -366,6 +381,13 @@ export function MistakeDetailView({
               </button>
             </div>
           </div>
+
+          {editError && (
+            <div className="p-3 bg-red-50 border border-red-200 text-red-800 text-xs rounded-xl flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 text-red-600 shrink-0" />
+              <span>{editError}</span>
+            </div>
+          )}
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             
@@ -704,10 +726,20 @@ export function MistakeDetailView({
 
                 <button
                   onClick={handleShare}
-                  className="w-9 h-9 rounded-full flex items-center justify-center border border-[#E8E2D9] hover:bg-[#F5F2ED] transition-colors shadow-sm bg-white"
-                  title="Share Reference"
+                  className="h-9 px-3 rounded-full flex items-center gap-1.5 border border-[#E8E2D9] hover:bg-[#F5F2ED] transition-colors shadow-xs bg-white text-xs font-semibold cursor-pointer"
+                  title="Copy link to clipboard"
                 >
-                  <Share2 className="w-4 h-4 text-[#2D2A26]" />
+                  {copiedShare ? (
+                    <>
+                      <Check className="w-3.5 h-3.5 text-emerald-600" />
+                      <span className="text-emerald-700 text-[11px] font-bold">Copied!</span>
+                    </>
+                  ) : (
+                    <>
+                      <Share2 className="w-3.5 h-3.5 text-[#2D2A26]" />
+                      <span className="text-[#2D2A26] text-[11px] hidden sm:inline">Share</span>
+                    </>
+                  )}
                 </button>
               </div>
             </div>
@@ -865,22 +897,24 @@ export function MistakeDetailView({
                   </div>
                 </div>
 
-                {/* Quick Practice Trigger and result */}
-                <div className="pt-2">
-                  {practiceStatus === 'loaded' ? (
-                    <div className="bg-[#F5F2ED] border border-[#8DA38A]/60 p-2.5 rounded-xl text-[#5A5A40] text-xs flex items-center gap-1.5 animate-fade-in font-sans">
-                      <Sparkles className="w-4 h-4 text-[#8DA38A]" /> Practice simulation load verified. Recommended concept logs updated.
-                    </div>
-                  ) : (
-                    <button
-                      onClick={triggerPractice}
-                      disabled={practiceStatus === 'loading'}
-                      className="w-full py-2.5 bg-[#5A5A40] hover:bg-[#4A453E] text-white rounded-full font-sans text-xs font-bold uppercase tracking-widest flex items-center justify-center gap-1 transition-all active:scale-95 cursor-pointer"
-                    >
-                      {practiceStatus === 'loading' ? 'Simulating...' : 'Practice Similar'}
-                      <ArrowRight className="w-3.5 h-3.5" />
-                    </button>
-                  )}
+                {/* FEATURE 2: AI Clone Practice Trigger */}
+                <div className="pt-2 space-y-2">
+                  <button
+                    onClick={() => setIsAiPracticeOpen(true)}
+                    className="w-full py-2.5 bg-gradient-to-r from-[#5A5A40] via-[#4A453E] to-[#2D2A26] hover:opacity-95 text-white rounded-full font-sans text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all active:scale-95 cursor-pointer shadow-sm group"
+                  >
+                    <Sparkles className="w-3.5 h-3.5 text-[#E8D099] group-hover:rotate-12 transition-transform" />
+                    <span>Practice AI Clone Challenge</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
+
+                  <button
+                    onClick={triggerPractice}
+                    disabled={practiceStatus === 'loading'}
+                    className="w-full py-1.5 bg-[#F5F2ED] hover:bg-[#E8E2D9] text-[#6B6357] hover:text-[#2D2A26] rounded-full font-sans text-[10px] font-bold uppercase tracking-wider flex items-center justify-center gap-1 transition-colors cursor-pointer"
+                  >
+                    {practiceStatus === 'loading' ? 'Simulating Review Arena...' : 'Review in Standard Arena'}
+                  </button>
                 </div>
               </div>
 
@@ -1011,6 +1045,16 @@ export function MistakeDetailView({
           </div>
         </div>
       )}
+
+      {/* FEATURE 2: AI Clone Practice Arena Modal */}
+      <AiClonePracticeModal
+        isOpen={isAiPracticeOpen}
+        onClose={() => setIsAiPracticeOpen(false)}
+        mistake={mistake}
+        subject={subjects.find((s) => s.id === mistake.subjectId)}
+        topic={topics.find((t) => t.id === mistake.topicId)}
+        onMarkMastered={(id) => editMistake(id, { status: 'Mastered' })}
+      />
 
     </div>
   );

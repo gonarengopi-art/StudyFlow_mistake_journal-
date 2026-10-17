@@ -32,20 +32,20 @@ export function UpgradePremiumView({
   // Benefits list
   const premiumBenefits = [
     {
-      title: "Unlimited Activity Quotas",
-      desc: "Lifts the standard 1,000 daily database reads to 100,000+ so your large physics/biology logs never freeze."
+      title: "✨ Feature 1: Snap & Extract (3-Sec Mistake Logger)",
+      desc: "Snap a photo of any handwritten or printed exam question, screenshot, or text. Gemini AI extracts formulas, auto-fills 7 fields, diagnoses the mistake trap, and drafts your reflection instantly."
     },
     {
-      title: "Active Recall Analytics",
-      desc: "Unlock advanced insights, subject heatmaps, and error-frequency forecasting on your dashboard."
+      title: "✨ Feature 2: AI Clone Practice Question Arena",
+      desc: "Generate infinite fresh clone practice problems targeting the exact same concept and cognitive traps with new numerical setups and step-by-step distractor reasoning breakdowns."
     },
     {
-      title: "Priority Cloud Backup",
-      desc: "Double-redundant server-side backups ensure your precious mistake logs are never lost."
+      title: "Unlimited Activity & Mistakes",
+      desc: "Lifts the standard 50-mistake cap and 1,000 daily read limits to 100,000+ so your large physics, chemistry, and biology journals never freeze."
     },
     {
-      title: "Unrestricted Folders & Subjects",
-      desc: "Create endless study subjects, nested topics, and customized tags without any structure limits."
+      title: "Active Recall Analytics & Heatmaps",
+      desc: "Unlock advanced insights, subject error-frequency forecasting, and spaced repetition streaks on your dashboard."
     },
     {
       title: "One-Time $20 Price (No Monthly Fee)",

@@ -146,9 +146,40 @@ service cloud.firestore {
       allow delete: if isSignedIn() && resource.data.userId == request.auth.uid;
     }
 
-    match /usersettings/{userId} {
-      allow create, update: if isSignedIn() && userId == request.auth.uid && isValidUserSetting(request.resource.data);
-      allow read: if isSignedIn() && userId == request.auth.uid;
+    // Study Squad validation
+    function isValidSquad(data) {
+      return data.keys().hasAll(['id', 'name', 'code', 'subjectId', 'ownerUid', 'ownerName', 'memberUids', 'createdAt'])
+        && data.id is string && data.id.size() <= 128
+        && data.name is string && data.name.size() <= 200
+        && data.code is string && data.code.size() <= 20
+        && data.subjectId is string && data.subjectId.size() <= 128
+        && data.ownerUid is string && data.ownerUid.size() <= 128
+        && data.ownerName is string && data.ownerName.size() <= 100
+        && data.memberUids is list && data.memberUids.size() <= 200
+        && data.createdAt is string;
+    }
+
+    match /squads/{squadId} {
+      allow create: if isSignedIn() && isValidId(squadId) && isValidSquad(request.resource.data) && request.resource.data.ownerUid == request.auth.uid;
+      allow read, list: if isSignedIn();
+      allow update: if isSignedIn() && (
+        request.resource.data.memberUids.hasAll([request.auth.uid]) ||
+        resource.data.ownerUid == request.auth.uid ||
+        isAdmin()
+      );
+      allow delete: if isSignedIn() && (resource.data.ownerUid == request.auth.uid || isAdmin());
+
+      match /mistakes/{mistakeId} {
+        allow read, list: if isSignedIn();
+        allow create: if isSignedIn() && request.resource.data.authorUid == request.auth.uid;
+        allow update: if isSignedIn();
+        allow delete: if isSignedIn() && (resource.data.authorUid == request.auth.uid || isAdmin());
+      }
+
+      match /scores/{scoreUid} {
+        allow read, list: if isSignedIn();
+        allow create, update: if isSignedIn() && scoreUid == request.auth.uid;
+      }
     }
   }
 }

@@ -29,6 +29,7 @@ import { MistakeCategory } from './types';
 
 import { Sparkles, Calendar, BookOpen, AlertCircle, X, ChevronRight, CheckCircle, GraduationCap, Eye, ZoomIn, ZoomOut, RotateCcw, Maximize2 } from 'lucide-react';
 import { INITIAL_SUBJECTS, INITIAL_TOPICS, INITIAL_SUBTOPICS, INITIAL_MISTAKES } from './initialData';
+import { safeSetItem } from './utils/storage';
 
 export default function App() {
   const store = useJournalStore();
@@ -118,14 +119,14 @@ export default function App() {
 
   // Persist user name updates
   useEffect(() => {
-    localStorage.setItem('studyflow_username', userName);
+    safeSetItem('studyflow_username', userName);
   }, [userName]);
 
   // Handle Stripe Payment Redirect Success & Resilient Pending Upgrades
   useEffect(() => {
     const isPaymentSuccess = window.location.search.includes('payment=success') || window.location.href.includes('payment=success');
     if (isPaymentSuccess) {
-      localStorage.setItem('studyflow_pending_premium', 'true');
+      safeSetItem('studyflow_pending_premium', 'true');
       const newUrl = window.location.origin + window.location.pathname;
       window.history.replaceState({}, document.title, newUrl);
     }
@@ -207,7 +208,6 @@ export default function App() {
       setIsAnswerRevealed(false);
     } else {
       setIsReviewOpen(false);
-      alert('Congratulations! You completed your active mistake review cycle.');
     }
   };
 
@@ -229,20 +229,20 @@ export default function App() {
 
   // Database resetting triggers
   const handleResetToDemo = () => {
-    localStorage.setItem('studyflow_subjects', JSON.stringify(INITIAL_SUBJECTS));
-    localStorage.setItem('studyflow_topics', JSON.stringify(INITIAL_TOPICS));
-    localStorage.setItem('studyflow_subtopics', JSON.stringify(INITIAL_SUBTOPICS));
-    localStorage.setItem('studyflow_mistakes', JSON.stringify(INITIAL_MISTAKES));
+    safeSetItem('studyflow_subjects', JSON.stringify(INITIAL_SUBJECTS));
+    safeSetItem('studyflow_topics', JSON.stringify(INITIAL_TOPICS));
+    safeSetItem('studyflow_subtopics', JSON.stringify(INITIAL_SUBTOPICS));
+    safeSetItem('studyflow_mistakes', JSON.stringify(INITIAL_MISTAKES));
     
     // Hard refresh window for complete clean memory reinstantiation
     window.location.reload();
   };
 
   const handleClearAllMemory = () => {
-    localStorage.setItem('studyflow_subjects', JSON.stringify([]));
-    localStorage.setItem('studyflow_topics', JSON.stringify([]));
-    localStorage.setItem('studyflow_subtopics', JSON.stringify([]));
-    localStorage.setItem('studyflow_mistakes', JSON.stringify([]));
+    safeSetItem('studyflow_subjects', JSON.stringify([]));
+    safeSetItem('studyflow_topics', JSON.stringify([]));
+    safeSetItem('studyflow_subtopics', JSON.stringify([]));
+    safeSetItem('studyflow_mistakes', JSON.stringify([]));
     
     window.location.reload();
   };
@@ -345,6 +345,7 @@ export default function App() {
                 return (
                   <DashboardView
                     subjects={store.subjects}
+                    topics={store.topics}
                     mistakes={store.mistakes}
                     onNavigate={handleNavigate}
                     onSelectMistake={handleSelectMistake}

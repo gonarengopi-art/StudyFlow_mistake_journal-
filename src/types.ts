@@ -63,3 +63,52 @@ export interface MistakeEntry {
   // Review Status
   status: ReviewStatus;
 }
+
+export interface StudySquad {
+  id: string;
+  name: string;
+  description?: string;
+  code: string; // 6-character unique code e.g. 'BIO492'
+  subjectId: string;
+  ownerUid: string;
+  ownerName: string;
+  memberUids: string[];
+  memberNames?: Record<string, string>; // uid -> displayName
+  createdAt: string;
+}
+
+export interface SquadMistakeEntry {
+  id: string;
+  squadId: string;
+  title: string;
+  subjectId: string;
+  topicId?: string;
+  subtopicId?: string;
+  dateLogged: string;
+  imageUrl?: string;
+  imageUrls?: string[];
+  originalQuestion: string;
+  myAnswer: string;
+  correctAnswer: string;
+  whatIGotWrong?: string;
+  correctExplanation: string;
+  reflection?: string;
+  futureAdvice?: string;
+  categories: MistakeCategory[];
+  status?: ReviewStatus;
+  authorUid: string;
+  authorName: string;
+  lastEditedByName?: string;
+  lastEditedAt?: string;
+  likes?: number;
+  likedBy?: string[];
+}
+
+export interface SquadMemberScore {
+  uid: string;
+  displayName: string;
+  accuracy: number;
+  reviewsCompleted: number;
+  cardsMastered: number;
+  lastActiveDate: string;
+}

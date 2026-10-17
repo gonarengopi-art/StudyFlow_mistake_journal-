@@ -6,6 +6,9 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Subject, Topic, MistakeEntry, MistakeCategory } from '../types';
 import { X, Sparkles, AlertCircle, HelpCircle, ArrowRight, BookMarked, ToggleLeft, Upload, Trash2, Image as ImageIcon, Clipboard, Camera } from 'lucide-react';
+import { AiSnapExtractBar } from './AiSnapExtractBar';
+import { ExtractedMistakeData } from '../services/aiService';
+import { readImageFromClipboard, extractImageFromClipboardEvent } from '../utils/clipboard';
 
 interface QuickAddModalProps {
   isOpen: boolean;
@@ -92,7 +95,7 @@ export function QuickAddModal({
       }, 120);
     } catch (err) {
       console.error("Camera access error:", err);
-      alert("Could not access camera. Please check your browser's site permissions for camera access.");
+      setErrorText("Could not access camera. Please check your browser's site permissions for camera access.");
       setIsCameraActive(false);
     }
   };
@@ -108,7 +111,7 @@ export function QuickAddModal({
   const addImageToUrls = (url: string) => {
     setImageUrls(prev => {
       if (prev.length >= 10) {
-        alert("Maximum of 10 photos / screenshots can be added per mistake log.");
+        setErrorText("Maximum of 10 photos / screenshots can be added per mistake log.");
         return prev;
       }
       return [...prev, url];
@@ -182,11 +185,11 @@ export function QuickAddModal({
 
   const handleFileReader = (file: File) => {
     if (!file.type.startsWith('image/')) {
-      alert('Please upload an image file (PNG, JPG, BMP, WEBP, etc.).');
+      setErrorText('Please upload an image file (PNG, JPG, BMP, WEBP, etc.).');
       return;
     }
     if (file.size > 2.5 * 1024 * 1024) {
-      alert('This image exceeds 2.5MB. Please upload a smaller image.');
+      setErrorText('This image exceeds 2.5MB. Please upload a smaller image.');
       return;
     }
     const reader = new FileReader();
@@ -224,21 +227,56 @@ export function QuickAddModal({
     }
   };
 
+  const [clipboardToast, setClipboardToast] = useState<string | null>(null);
+
   const handlePasteEvent = (e: React.ClipboardEvent) => {
-    const items = e.clipboardData?.items;
-    if (items) {
-      for (let i = 0; i < items.length; i++) {
-        if (items[i].type.indexOf('image') !== -1) {
-          const file = items[i].getAsFile();
-          if (file) {
-            handleFileReader(file);
-            e.preventDefault();
-            break;
-          }
-        }
-      }
+    const file = extractImageFromClipboardEvent(e);
+    if (file) {
+      e.preventDefault();
+      handleFileReader(file);
+      setClipboardToast('Image attached from clipboard!');
+      setTimeout(() => setClipboardToast(null), 3500);
     }
   };
+
+  const handlePasteFromClipboard = async () => {
+    setClipboardToast(null);
+    const result = await readImageFromClipboard();
+    if (result.dataUrl) {
+      setImageUrls((prev) => [result.dataUrl!, ...prev]);
+      setClipboardToast('Screenshot attached from clipboard!');
+      setTimeout(() => setClipboardToast(null), 3500);
+    } else if (result.text) {
+      if (!title) {
+        setTitle(result.text.slice(0, 100));
+        setClipboardToast('Title pasted from clipboard!');
+      } else {
+        setClipboardToast('Clipboard contains text (paste into form).');
+      }
+      setTimeout(() => setClipboardToast(null), 3500);
+    } else if (result.error) {
+      setClipboardToast(result.error);
+      setTimeout(() => setClipboardToast(null), 4000);
+    }
+  };
+
+  // Listen for global Ctrl+V while Quick Add modal is open
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleGlobalPaste = (e: ClipboardEvent) => {
+      const file = extractImageFromClipboardEvent(e);
+      if (file) {
+        e.preventDefault();
+        handleFileReader(file);
+        setClipboardToast('Screenshot attached from clipboard (Ctrl+V)!');
+        setTimeout(() => setClipboardToast(null), 3500);
+      }
+    };
+
+    window.addEventListener('paste', handleGlobalPaste);
+    return () => window.removeEventListener('paste', handleGlobalPaste);
+  }, [isOpen]);
 
   // Dynamically update available topics as soon as subject changes
   const filteredTopics = useMemo(() => {
@@ -264,6 +302,46 @@ export function QuickAddModal({
       setIsNewTopic(true);
     } else {
       setIsNewTopic(false);
+    }
+  };
+
+  const handleAiExtracted = (data: ExtractedMistakeData, extractedImgUrl?: string) => {
+    if (data.title) setTitle(data.title);
+    if (extractedImgUrl) {
+      setImageUrls((prev) => [extractedImgUrl, ...prev]);
+    }
+
+    if (data.suggestedSubject) {
+      const match = subjects.find(
+        (s) => s.name.toLowerCase() === data.suggestedSubject.toLowerCase()
+      );
+      if (match) {
+        setSelectedSubjectId(match.id);
+        setIsNewSubject(false);
+      } else {
+        setIsNewSubject(true);
+        setCustomSubjectName(data.suggestedSubject);
+      }
+    }
+
+    if (data.suggestedTopic) {
+      const match = topics.find(
+        (t) => t.name.toLowerCase() === data.suggestedTopic.toLowerCase()
+      );
+      if (match) {
+        setSelectedTopicId(match.id);
+        setIsNewTopic(false);
+      } else {
+        setIsNewTopic(true);
+        setCustomTopicName(data.suggestedTopic);
+      }
+    }
+
+    if (data.myAnswer) setMyAnswer(data.myAnswer);
+    if (data.correctAnswer) setCorrectAnswer(data.correctAnswer);
+    if (data.reflection) setReflection(data.reflection);
+    if (data.categories && data.categories.length > 0) {
+      setChosenCategories(data.categories);
     }
   };
 
@@ -394,6 +472,16 @@ export function QuickAddModal({
             )}
           </div>
         )}
+
+        {/* FEATURE 1: AI SNAP & EXTRACT */}
+        <div className="mb-4">
+          <AiSnapExtractBar
+            isCompact={true}
+            subjects={subjects}
+            topics={topics}
+            onExtracted={handleAiExtracted}
+          />
+        </div>
 
         {/* Form Body */}
         <form onSubmit={handleSubmit} className="space-y-4 text-left">
@@ -610,10 +698,10 @@ export function QuickAddModal({
                       </div>
                     )}
 
-                    <div className="flex gap-2.5 mt-1" onClick={(e) => e.stopPropagation()}>
+                    <div className="flex flex-wrap justify-center gap-2 mt-1" onClick={(e) => e.stopPropagation()}>
                       <label 
                         htmlFor="file-upload-modal"
-                        className="cursor-pointer flex flex-col items-center justify-center px-3 py-1.5 border border-stone-200 hover:border-stone-400 bg-white hover:bg-stone-50 rounded-lg transition-all shadow-xs text-center min-w-[95px]"
+                        className="cursor-pointer flex flex-col items-center justify-center px-3 py-1.5 border border-stone-200 hover:border-stone-400 bg-white hover:bg-stone-50 rounded-lg transition-all shadow-xs text-center min-w-[85px]"
                       >
                         <Upload className="w-3.5 h-3.5 text-[#5A5A40] mb-0.5" />
                         <span className="text-[9px] font-bold text-[#2D2A26]">
@@ -628,18 +716,40 @@ export function QuickAddModal({
                           e.stopPropagation();
                           startCamera();
                         }}
-                        className="flex flex-col items-center justify-center px-3 py-1.5 border border-stone-200 hover:border-stone-400 bg-white hover:bg-stone-50 rounded-lg transition-all shadow-xs text-center min-w-[95px] cursor-pointer"
+                        className="flex flex-col items-center justify-center px-3 py-1.5 border border-stone-200 hover:border-stone-400 bg-white hover:bg-stone-50 rounded-lg transition-all shadow-xs text-center min-w-[85px] cursor-pointer"
                       >
                         <Camera className="w-3.5 h-3.5 text-[#5A5A40] mb-0.5" />
                         <span className="text-[9px] font-bold text-[#2D2A26]">
                           Take Photo
                         </span>
                       </button>
+
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handlePasteFromClipboard();
+                        }}
+                        className="flex flex-col items-center justify-center px-3 py-1.5 border border-stone-200 hover:border-stone-400 bg-white hover:bg-stone-50 rounded-lg transition-all shadow-xs text-center min-w-[85px] cursor-pointer"
+                        title="Paste screenshot directly from your clipboard or press Ctrl+V"
+                      >
+                        <Clipboard className="w-3.5 h-3.5 text-[#5A5A40] mb-0.5" />
+                        <span className="text-[9px] font-bold text-[#2D2A26]">
+                          Paste Clipboard
+                        </span>
+                      </button>
                     </div>
+
+                    {clipboardToast && (
+                      <div className="text-[10px] font-medium text-emerald-800 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-md inline-flex items-center gap-1.5 animate-fade-in">
+                        <span>{clipboardToast}</span>
+                      </div>
+                    )}
 
                     <div className="text-center">
                       <span className="text-[9px] text-[#9A9184] block font-sans">
-                        Or click & paste image with <kbd className="px-0.5 py-0.5 bg-stone-100 border rounded text-[7px]">Ctrl+V</kbd>
+                        Or click anywhere inside and press <kbd className="px-1 py-0.5 bg-stone-100 border rounded text-[8px] font-mono font-semibold">Ctrl+V</kbd>
                       </span>
                     </div>
                   </div>

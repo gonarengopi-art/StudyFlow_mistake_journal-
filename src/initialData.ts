@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { Subject, Topic, Subtopic, MistakeEntry } from './types';
+import { Subject, Topic, Subtopic, MistakeEntry, StudySquad, SquadMistakeEntry, SquadMemberScore } from './types';
 
 export const INITIAL_SUBJECTS: Subject[] = [
   { id: 'sb-bio', name: 'Biology' },
@@ -130,3 +130,117 @@ export const INITIAL_MISTAKES: MistakeEntry[] = [
     status: 'Mastered'
   }
 ];
+
+export const INITIAL_SQUADS: StudySquad[] = [
+  {
+    id: 'sq-bio-elite',
+    name: 'MCAT Biology Revision Cohort',
+    description: 'High-yield genetics traps, cellular energetics calculations, and membrane transport edge cases.',
+    code: 'BIO942',
+    subjectId: 'sb-bio',
+    ownerUid: 'system-demo',
+    ownerName: 'Dr. Evelyn Reed',
+    memberUids: ['system-demo', 'demo-user-1', 'demo-user-2'],
+    memberNames: {
+      'system-demo': 'Dr. Evelyn Reed',
+      'demo-user-1': 'Maya Chen',
+      'demo-user-2': 'Liam Patel',
+    },
+    createdAt: '2026-09-15',
+  },
+  {
+    id: 'sq-chem-titr',
+    name: 'Chemistry Titration & Redox Squad',
+    description: 'Mastering stoichiometric ratios, equilibrium constants, and indicator titration pitfalls.',
+    code: 'CHM305',
+    subjectId: 'sb-chem',
+    ownerUid: 'system-demo',
+    ownerName: 'Liam Patel',
+    memberUids: ['system-demo', 'demo-user-2', 'demo-user-3'],
+    memberNames: {
+      'system-demo': 'Liam Patel',
+      'demo-user-2': 'Marcus Vance',
+      'demo-user-3': 'Elena Rostova',
+    },
+    createdAt: '2026-09-20',
+  },
+];
+
+export const INITIAL_SQUAD_MISTAKES: SquadMistakeEntry[] = [
+  {
+    id: 'sqm-1',
+    squadId: 'sq-bio-elite',
+    title: 'Dihybrid Cross recombinant frequency trap',
+    subjectId: 'sb-bio',
+    topicId: 'tp-bio-gen',
+    subtopicId: 'sbt-bio-gen-di',
+    dateLogged: getRelDate(1),
+    originalQuestion: 'In Drosophila, two linked genes are 16 map units apart. In a testcross of an AaBb individual, what percentage of progeny will be recombinant?',
+    myAnswer: '8% thinking recombinant frequency is divided between each single allele.',
+    correctAnswer: '16% total recombinant progeny (8% for each recombinant phenotype).',
+    whatIGotWrong: 'Forgot map units (cM) directly equal the TOTAL percentage of recombinant offspring.',
+    correctExplanation: 'One map unit (centiMorgan) is defined as 1% recombination frequency. A distance of 16 map units means 16% of total gametes are recombinant, divided equally between the two recombinant phenotypes (8% each).',
+    reflection: '1 map unit = 1% total recombination. Never divide by 2 unless calculating one specific recombinant class.',
+    futureAdvice: 'Read whether the question asks for TOTAL recombinant offspring or ONE specific recombinant phenotype.',
+    categories: ['Content Gap', 'Calculation Error'],
+    authorUid: 'demo-user-1',
+    authorName: 'Maya Chen',
+    likes: 4,
+    likedBy: ['system-demo'],
+  },
+  {
+    id: 'sqm-2',
+    squadId: 'sq-bio-elite',
+    title: 'Sodium-Potassium Pump stoichiometric direction',
+    subjectId: 'sb-bio',
+    topicId: 'tp-bio-cell',
+    subtopicId: 'sbt-bio-cell-diff',
+    dateLogged: getRelDate(2),
+    originalQuestion: 'During active primary transport by the Na+/K+ ATPase, how many ions are moved across the plasma membrane per ATP hydrolyzed, and in which directions?',
+    myAnswer: '2 Na+ out and 3 K+ in.',
+    correctAnswer: '3 Na+ OUT and 2 K+ IN.',
+    whatIGotWrong: 'Inverted the 3:2 stoichiometry and directions of sodium and potassium.',
+    correctExplanation: 'Remember the mnemonic "321 NOKIA": 3 Na+ Out, 2 K+ In, 1 ATP consumed. Since both ions move against their electrochemical gradients, 3 positive charges leave for every 2 positive charges entering, contributing to the negative resting membrane potential.',
+    reflection: 'Always visualize "NOKIA" = Na+ Out, K+ In (3:2:1).',
+    futureAdvice: 'Negative membrane potential requires more positive ions leaving (3 Na+) than entering (2 K+).',
+    categories: ['Knowledge Recall', 'Careless Error'],
+    authorUid: 'system-demo',
+    authorName: 'Dr. Evelyn Reed',
+    likes: 7,
+    likedBy: ['demo-user-1', 'demo-user-2'],
+  },
+  {
+    id: 'sqm-3',
+    squadId: 'sq-chem-titr',
+    title: 'Diprotic vs Monoprotic acid titration volume doubling',
+    subjectId: 'sb-chem',
+    topicId: 'tp-chem-vol',
+    subtopicId: 'sbt-chem-vol-acid',
+    dateLogged: getRelDate(1),
+    originalQuestion: 'What volume of 0.20 M NaOH is required to neutralize 25.0 mL of 0.10 M H2SO4 to the second equivalence point?',
+    myAnswer: '12.5 mL assuming 1:1 stoichiometry.',
+    correctAnswer: '25.0 mL (H2SO4 donates 2 protons per molecule).',
+    whatIGotWrong: 'Treated sulfuric acid as monoprotic like HCl.',
+    correctExplanation: 'H2SO4 + 2 NaOH -> Na2SO4 + 2 H2O. Moles of H2SO4 = 0.025 L * 0.10 M = 0.0025 mol. Therefore, moles of NaOH needed = 2 * 0.0025 = 0.0050 mol. Volume of NaOH = 0.0050 mol / 0.20 M = 0.025 L = 25.0 mL.',
+    reflection: 'Check chemical formula subscripts before starting stoichiometry.',
+    futureAdvice: 'Highlight the number of ionizable protons (H+) immediately in any acid-base problem.',
+    categories: ['Exam Technique', 'Calculation Error'],
+    authorUid: 'demo-user-2',
+    authorName: 'Marcus Vance',
+    likes: 5,
+    likedBy: ['demo-user-3'],
+  },
+];
+
+export const INITIAL_SQUAD_SCORES: Record<string, SquadMemberScore[]> = {
+  'sq-bio-elite': [
+    { uid: 'demo-user-1', displayName: 'Maya Chen', accuracy: 92, reviewsCompleted: 38, cardsMastered: 24, lastActiveDate: 'Today' },
+    { uid: 'system-demo', displayName: 'Dr. Evelyn Reed', accuracy: 88, reviewsCompleted: 45, cardsMastered: 30, lastActiveDate: 'Today' },
+    { uid: 'demo-user-2', displayName: 'Liam Patel', accuracy: 76, reviewsCompleted: 22, cardsMastered: 14, lastActiveDate: 'Yesterday' },
+  ],
+  'sq-chem-titr': [
+    { uid: 'demo-user-3', displayName: 'Elena Rostova', accuracy: 95, reviewsCompleted: 30, cardsMastered: 21, lastActiveDate: 'Today' },
+    { uid: 'demo-user-2', displayName: 'Marcus Vance', accuracy: 84, reviewsCompleted: 26, cardsMastered: 16, lastActiveDate: 'Today' },
+    { uid: 'system-demo', displayName: 'Liam Patel', accuracy: 80, reviewsCompleted: 19, cardsMastered: 12, lastActiveDate: '2 days ago' },
+  ],
+};

@@ -6,6 +6,7 @@
 import { useState, useEffect } from 'react';
 import { Subject, Topic, Subtopic, MistakeEntry } from './types';
 import { auth, db } from './firebase';
+import { safeSetItem, safeGetItem } from './utils/storage';
 import { 
   onAuthStateChanged, 
   signInWithPopup, 
@@ -144,7 +145,7 @@ export function useJournalStore() {
   const getLocalQuotaReads = (uid: string) => {
     const today = getTodayStr();
     try {
-      const cached = localStorage.getItem(`studyflow_quota_${uid}`);
+      const cached = safeGetItem(`studyflow_quota_${uid}`);
       if (cached) {
         const parsed = JSON.parse(cached);
         if (parsed.date === today) {
@@ -159,11 +160,7 @@ export function useJournalStore() {
 
   const saveLocalQuotaReads = (uid: string, reads: number) => {
     const today = getTodayStr();
-    try {
-      localStorage.setItem(`studyflow_quota_${uid}`, JSON.stringify({ date: today, reads }));
-    } catch (e) {
-      console.error(e);
-    }
+    safeSetItem(`studyflow_quota_${uid}`, JSON.stringify({ date: today, reads }));
   };
 
   const recordReads = (count: number, syncToFirebase: boolean = true) => {
@@ -285,10 +282,10 @@ export function useJournalStore() {
     if (!user) {
       // Offline/Guest mode - load from localStorage, but default to completely BLANK empty maps
       try {
-        const storedSubjects = localStorage.getItem('studyflow_subjects');
-        const storedTopics = localStorage.getItem('studyflow_topics');
-        const storedSubtopics = localStorage.getItem('studyflow_subtopics');
-        const storedMistakes = localStorage.getItem('studyflow_mistakes');
+        const storedSubjects = safeGetItem('studyflow_subjects');
+        const storedTopics = safeGetItem('studyflow_topics');
+        const storedSubtopics = safeGetItem('studyflow_subtopics');
+        const storedMistakes = safeGetItem('studyflow_mistakes');
 
         // Note: Starts with empty arrays [] as requested
         setSubjects(storedSubjects ? JSON.parse(storedSubjects) : []);
@@ -315,7 +312,7 @@ export function useJournalStore() {
         if (snapshot.exists()) {
           const data = snapshot.data();
           setUserDocData(data);
-          localStorage.setItem(`studyflow_user_${user.uid}`, JSON.stringify(data));
+          safeSetItem(`studyflow_user_${user.uid}`, JSON.stringify(data));
           
           const today = getTodayStr();
           if (data.dailyQuotaDate === today && typeof data.dailyQuotaReads === 'number') {
@@ -332,7 +329,7 @@ export function useJournalStore() {
       },
       (error) => {
         try {
-          const cached = localStorage.getItem(`studyflow_user_${user.uid}`);
+          const cached = safeGetItem(`studyflow_user_${user.uid}`);
           if (cached) setUserDocData(JSON.parse(cached));
         } catch (e) {
           console.error('Failed to load cached user', e);
@@ -349,13 +346,13 @@ export function useJournalStore() {
           items.push(doc.data() as Subject);
         });
         setSubjects(items);
-        localStorage.setItem(`studyflow_subjects_${user.uid}`, JSON.stringify(items));
+        safeSetItem(`studyflow_subjects_${user.uid}`, JSON.stringify(items));
         setLoading(false);
         recordReads(snapshot.size);
       },
       (error) => {
         try {
-          const cached = localStorage.getItem(`studyflow_subjects_${user.uid}`);
+          const cached = safeGetItem(`studyflow_subjects_${user.uid}`);
           if (cached) setSubjects(JSON.parse(cached));
         } catch (e) {
           console.error('Failed to load cached subjects', e);
@@ -373,12 +370,12 @@ export function useJournalStore() {
           items.push(doc.data() as Topic);
         });
         setTopics(items);
-        localStorage.setItem(`studyflow_topics_${user.uid}`, JSON.stringify(items));
+        safeSetItem(`studyflow_topics_${user.uid}`, JSON.stringify(items));
         recordReads(snapshot.size);
       },
       (error) => {
         try {
-          const cached = localStorage.getItem(`studyflow_topics_${user.uid}`);
+          const cached = safeGetItem(`studyflow_topics_${user.uid}`);
           if (cached) setTopics(JSON.parse(cached));
         } catch (e) {
           console.error('Failed to load cached topics', e);
@@ -396,12 +393,12 @@ export function useJournalStore() {
           items.push(doc.data() as Subtopic);
         });
         setSubtopics(items);
-        localStorage.setItem(`studyflow_subtopics_${user.uid}`, JSON.stringify(items));
+        safeSetItem(`studyflow_subtopics_${user.uid}`, JSON.stringify(items));
         recordReads(snapshot.size);
       },
       (error) => {
         try {
-          const cached = localStorage.getItem(`studyflow_subtopics_${user.uid}`);
+          const cached = safeGetItem(`studyflow_subtopics_${user.uid}`);
           if (cached) setSubtopics(JSON.parse(cached));
         } catch (e) {
           console.error('Failed to load cached subtopics', e);
@@ -420,12 +417,12 @@ export function useJournalStore() {
         });
         const normalizedItems = normalizeSampleDates(items);
         setMistakes(normalizedItems);
-        localStorage.setItem(`studyflow_mistakes_${user.uid}`, JSON.stringify(normalizedItems));
+        safeSetItem(`studyflow_mistakes_${user.uid}`, JSON.stringify(normalizedItems));
         recordReads(snapshot.size);
       },
       (error) => {
         try {
-          const cached = localStorage.getItem(`studyflow_mistakes_${user.uid}`);
+          const cached = safeGetItem(`studyflow_mistakes_${user.uid}`);
           if (cached) setMistakes(normalizeSampleDates(JSON.parse(cached)));
         } catch (e) {
           console.error('Failed to load cached mistakes', e);
@@ -523,7 +520,7 @@ export function useJournalStore() {
     } else {
       const newSubjects = [...subjects, newSubject];
       setSubjects(newSubjects);
-      localStorage.setItem(user ? `studyflow_subjects_${user.uid}` : 'studyflow_subjects', JSON.stringify(newSubjects));
+      safeSetItem(user ? `studyflow_subjects_${user.uid}` : 'studyflow_subjects', JSON.stringify(newSubjects));
     }
     return newId;
   };
@@ -538,7 +535,7 @@ export function useJournalStore() {
     } else {
       const newSubjects = subjects.map((s) => (s.id === id ? { ...s, name } : s));
       setSubjects(newSubjects);
-      localStorage.setItem(user ? `studyflow_subjects_${user.uid}` : 'studyflow_subjects', JSON.stringify(newSubjects));
+      safeSetItem(user ? `studyflow_subjects_${user.uid}` : 'studyflow_subjects', JSON.stringify(newSubjects));
     }
   };
 
@@ -581,10 +578,10 @@ export function useJournalStore() {
       setMistakes(newMistakes);
 
       const keyPref = user ? `_${user.uid}` : '';
-      localStorage.setItem(`studyflow_subjects${keyPref}`, JSON.stringify(newSubjects));
-      localStorage.setItem(`studyflow_topics${keyPref}`, JSON.stringify(newTopics));
-      localStorage.setItem(`studyflow_subtopics${keyPref}`, JSON.stringify(newSubtopics));
-      localStorage.setItem(`studyflow_mistakes${keyPref}`, JSON.stringify(newMistakes));
+      safeSetItem(`studyflow_subjects${keyPref}`, JSON.stringify(newSubjects));
+      safeSetItem(`studyflow_topics${keyPref}`, JSON.stringify(newTopics));
+      safeSetItem(`studyflow_subtopics${keyPref}`, JSON.stringify(newSubtopics));
+      safeSetItem(`studyflow_mistakes${keyPref}`, JSON.stringify(newMistakes));
     }
   };
 
@@ -602,7 +599,7 @@ export function useJournalStore() {
     } else {
       const newTopics = [...topics, newTopic];
       setTopics(newTopics);
-      localStorage.setItem(user ? `studyflow_topics_${user.uid}` : 'studyflow_topics', JSON.stringify(newTopics));
+      safeSetItem(user ? `studyflow_topics_${user.uid}` : 'studyflow_topics', JSON.stringify(newTopics));
     }
     return newId;
   };
@@ -625,7 +622,7 @@ export function useJournalStore() {
     } else {
       const newTopics = topics.map((t) => (t.id === id ? { ...t, name } : t));
       setTopics(newTopics);
-      localStorage.setItem(user ? `studyflow_topics_${user.uid}` : 'studyflow_topics', JSON.stringify(newTopics));
+      safeSetItem(user ? `studyflow_topics_${user.uid}` : 'studyflow_topics', JSON.stringify(newTopics));
     }
   };
 
@@ -656,9 +653,9 @@ export function useJournalStore() {
       setMistakes(newMistakes);
 
       const keyPref = user ? `_${user.uid}` : '';
-      localStorage.setItem(`studyflow_topics${keyPref}`, JSON.stringify(newTopics));
-      localStorage.setItem(`studyflow_subtopics${keyPref}`, JSON.stringify(newSubtopics));
-      localStorage.setItem(`studyflow_mistakes${keyPref}`, JSON.stringify(newMistakes));
+      safeSetItem(`studyflow_topics${keyPref}`, JSON.stringify(newTopics));
+      safeSetItem(`studyflow_subtopics${keyPref}`, JSON.stringify(newSubtopics));
+      safeSetItem(`studyflow_mistakes${keyPref}`, JSON.stringify(newMistakes));
     }
   };
 
@@ -676,7 +673,7 @@ export function useJournalStore() {
     } else {
       const newSubtopics = [...subtopics, newSub];
       setSubtopics(newSubtopics);
-      localStorage.setItem(user ? `studyflow_subtopics_${user.uid}` : 'studyflow_subtopics', JSON.stringify(newSubtopics));
+      safeSetItem(user ? `studyflow_subtopics_${user.uid}` : 'studyflow_subtopics', JSON.stringify(newSubtopics));
     }
     return newId;
   };
@@ -699,7 +696,7 @@ export function useJournalStore() {
     } else {
       const newSubtopics = subtopics.map((st) => (st.id === id ? { ...st, name } : st));
       setSubtopics(newSubtopics);
-      localStorage.setItem(user ? `studyflow_subtopics_${user.uid}` : 'studyflow_subtopics', JSON.stringify(newSubtopics));
+      safeSetItem(user ? `studyflow_subtopics_${user.uid}` : 'studyflow_subtopics', JSON.stringify(newSubtopics));
     }
   };
 
@@ -726,8 +723,8 @@ export function useJournalStore() {
       setMistakes(newMistakes);
 
       const keyPref = user ? `_${user.uid}` : '';
-      localStorage.setItem(`studyflow_subtopics${keyPref}`, JSON.stringify(newSubtopics));
-      localStorage.setItem(`studyflow_mistakes${keyPref}`, JSON.stringify(newMistakes));
+      safeSetItem(`studyflow_subtopics${keyPref}`, JSON.stringify(newSubtopics));
+      safeSetItem(`studyflow_mistakes${keyPref}`, JSON.stringify(newMistakes));
     }
   };
 
@@ -762,7 +759,7 @@ export function useJournalStore() {
     } else {
       const newMistakes = [newEntry, ...mistakes];
       setMistakes(newMistakes);
-      localStorage.setItem(user ? `studyflow_mistakes_${user.uid}` : 'studyflow_mistakes', JSON.stringify(newMistakes));
+      safeSetItem(user ? `studyflow_mistakes_${user.uid}` : 'studyflow_mistakes', JSON.stringify(newMistakes));
     }
     return newId;
   };
@@ -784,7 +781,7 @@ export function useJournalStore() {
     } else {
       const newMistakes = mistakes.map((m) => (m.id === id ? { ...m, ...updatedFields } as MistakeEntry : m));
       setMistakes(newMistakes);
-      localStorage.setItem(user ? `studyflow_mistakes_${user.uid}` : 'studyflow_mistakes', JSON.stringify(newMistakes));
+      safeSetItem(user ? `studyflow_mistakes_${user.uid}` : 'studyflow_mistakes', JSON.stringify(newMistakes));
     }
   };
 
@@ -798,7 +795,7 @@ export function useJournalStore() {
     } else {
       const newMistakes = mistakes.filter((m) => m.id !== id);
       setMistakes(newMistakes);
-      localStorage.setItem(user ? `studyflow_mistakes_${user.uid}` : 'studyflow_mistakes', JSON.stringify(newMistakes));
+      safeSetItem(user ? `studyflow_mistakes_${user.uid}` : 'studyflow_mistakes', JSON.stringify(newMistakes));
     }
   };
 

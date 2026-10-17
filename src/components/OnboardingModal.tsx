@@ -27,6 +27,7 @@ import {
   RotateCcw,
   MousePointerClick
 } from 'lucide-react';
+import { safeSetItem } from '../utils/storage';
 
 interface OnboardingModalProps {
   isOpen: boolean;
@@ -150,7 +151,7 @@ export function OnboardingModal({
   };
 
   const skipAndComplete = () => {
-    localStorage.setItem('studyflow_onboarded', 'true');
+    safeSetItem('studyflow_onboarded', 'true');
     onClose();
   };
 

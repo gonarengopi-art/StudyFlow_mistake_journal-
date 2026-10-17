@@ -29,6 +29,9 @@ import {
   ExternalLink
 } from 'lucide-react';
 import { MistakeEntry, Subject, Topic, Subtopic, MistakeCategory } from '../types';
+import { AiClonePracticeModal } from './AiClonePracticeModal';
+import { copyToClipboard } from '../utils/clipboard';
+import { safeSetItem } from '../utils/storage';
 
 // Native Web Audio synth engine for rewarding chimes without external assets
 const playSound = (type: 'success' | 'reveal' | 'complete' | 'streak' | 'error', isMuted: boolean) => {
@@ -184,6 +187,7 @@ export function ReviewArenaModal({
   const [reviewIndex, setReviewIndex] = useState<number>(0);
   const [isAnswerRevealed, setIsAnswerRevealed] = useState<boolean>(false);
   const [scratchpadText, setScratchpadText] = useState<string>('');
+  const [aiCloneCard, setAiCloneCard] = useState<MistakeEntry | null>(null);
   const [isMuted, setIsMuted] = useState<boolean>(() => {
     return localStorage.getItem('studyflow_arena_muted') === 'true';
   });
@@ -246,11 +250,11 @@ export function ReviewArenaModal({
 
   // Persist preferences
   useEffect(() => {
-    localStorage.setItem('studyflow_arena_muted', String(isMuted));
+    safeSetItem('studyflow_arena_muted', String(isMuted));
   }, [isMuted]);
 
   useEffect(() => {
-    localStorage.setItem('studyflow_arena_theme', arenaTheme);
+    safeSetItem('studyflow_arena_theme', arenaTheme);
   }, [arenaTheme]);
 
   // Start & stop timer based on session state
@@ -511,15 +515,17 @@ export function ReviewArenaModal({
     setBadgeCopySuccess(false);
   };
 
-  const handleCopyShareText = () => {
+  const handleCopyShareText = async () => {
     const masteredCount = cardHistory.filter(h => h.outcome === 'Mastered').length;
     const accuracy = cardHistory.length > 0 ? Math.round((masteredCount / cardHistory.length) * 100) : 0;
     const shareText = `🏆 StudyFlow Mistake Recall Arena: Conquered a deck of ${cardHistory.length} cards!\n⚡ Rank achieved: ${scoreBadge.name}\n🔥 Max Flame Streak: ${maxComboStreak}x\n✨ Total XP Earned: ${sessionXp} XP\n📈 Mastery Score: ${accuracy}%!\nAccelerating active recall mastery with offline-first precision!`;
 
-    navigator.clipboard.writeText(shareText);
-    setBadgeCopySuccess(true);
-    spawnParticle('📋 Copied statistics to clipboard!', 'text-emerald-400 font-sans font-bold');
-    setTimeout(() => setBadgeCopySuccess(false), 2000);
+    const success = await copyToClipboard(shareText);
+    if (success) {
+      setBadgeCopySuccess(true);
+      spawnParticle('📋 Copied statistics to clipboard!', 'text-emerald-400 font-sans font-bold');
+      setTimeout(() => setBadgeCopySuccess(false), 2000);
+    }
   };
 
   const handleNativeShare = async () => {
@@ -1048,7 +1054,7 @@ export function ReviewArenaModal({
                       spawnParticle('🚀 DECK LAUNCHED', 'text-cyan-400 font-extrabold text-xs');
                     } else {
                       playSound('error', isMuted);
-                      alert('There are no mistake cards matching this selection. Try adjusting filters!');
+                      spawnParticle('No matching mistake cards. Adjust filters!', 'text-amber-400 font-bold text-xs');
                     }
                   }}
                   disabled={targetMistakes.length === 0}
@@ -1515,6 +1521,19 @@ export function ReviewArenaModal({
                           <CheckCircle className="w-3.5 h-3.5" />
                           Got it! Mastered
                         </button>
+
+                        {/* AI Clone Challenge Trigger */}
+                        {currentMistake && (
+                          <button
+                            type="button"
+                            onClick={() => setAiCloneCard(currentMistake)}
+                            className="px-4 py-2 bg-gradient-to-r from-amber-500/20 to-orange-500/20 hover:from-amber-500/30 hover:to-orange-500/30 text-amber-300 border border-amber-500/30 rounded-xl text-xs font-bold cursor-pointer transition-all flex items-center gap-1.5 shadow-xs"
+                            title="Generate a fresh variation question to test concept mastery"
+                          >
+                            <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                            AI Clone Challenge
+                          </button>
+                        )}
                       </>
                     ) : (
                       <button
@@ -1768,6 +1787,18 @@ export function ReviewArenaModal({
           </div>
         </div>
       )}
+
+      {/* Embedded AI Clone Challenge Arena */}
+      <AiClonePracticeModal
+        isOpen={!!aiCloneCard}
+        onClose={() => setAiCloneCard(null)}
+        mistake={aiCloneCard}
+        subject={subjects.find((s) => s.id === aiCloneCard?.subjectId)}
+        topic={topics.find((t) => t.id === aiCloneCard?.topicId)}
+        onMarkMastered={(id) => {
+          editMistake(id, { status: 'Mastered' });
+        }}
+      />
 
     </div>
   );

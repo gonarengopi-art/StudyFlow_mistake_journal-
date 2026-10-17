@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Subject, Topic, Subtopic, MistakeEntry, MistakeCategory, ReviewStatus } from '../types';
 import { 
   Sparkles, 
@@ -25,6 +25,9 @@ import {
   Clipboard,
   Camera
 } from 'lucide-react';
+import { AiSnapExtractBar } from './AiSnapExtractBar';
+import { ExtractedMistakeData } from '../services/aiService';
+import { readImageFromClipboard, extractImageFromClipboardEvent } from '../utils/clipboard';
 
 interface CreateMistakeViewProps {
   subjects: Subject[];
@@ -110,7 +113,7 @@ export function CreateMistakeView({
       }, 120);
     } catch (err) {
       console.error("Camera access error:", err);
-      alert("Could not access camera. Please check your browser's site permissions for camera access.");
+      setErrorText("Could not access camera. Please check your browser's site permissions for camera access.");
       setIsCameraActive(false);
     }
   };
@@ -126,7 +129,7 @@ export function CreateMistakeView({
   const addImageToUrls = (url: string) => {
     setImageUrls(prev => {
       if (prev.length >= 10) {
-        alert("Maximum of 10 photos / screenshots can be added per mistake log.");
+        setErrorText("Maximum of 10 photos / screenshots can be added per mistake log.");
         return prev;
       }
       return [...prev, url];
@@ -151,11 +154,11 @@ export function CreateMistakeView({
 
   const handleFileReader = (file: File) => {
     if (!file.type.startsWith('image/')) {
-      alert('Please upload an image file (PNG, JPG, BMP, WEBP, etc.).');
+      setErrorText('Please upload an image file (PNG, JPG, BMP, WEBP, etc.).');
       return;
     }
     if (file.size > 2.5 * 1024 * 1024) {
-      alert('This image exceeds 2.5MB. Please upload a smaller image or compressed screenshot.');
+      setErrorText('This image exceeds 2.5MB. Please upload a smaller image or compressed screenshot.');
       return;
     }
     const reader = new FileReader();
@@ -193,21 +196,54 @@ export function CreateMistakeView({
     }
   };
 
+  const [clipboardToast, setClipboardToast] = useState<string | null>(null);
+
   const handlePasteEvent = (e: React.ClipboardEvent) => {
-    const items = e.clipboardData?.items;
-    if (items) {
-      for (let i = 0; i < items.length; i++) {
-        if (items[i].type.indexOf('image') !== -1) {
-          const file = items[i].getAsFile();
-          if (file) {
-            handleFileReader(file);
-            e.preventDefault();
-            break;
-          }
-        }
-      }
+    const file = extractImageFromClipboardEvent(e);
+    if (file) {
+      e.preventDefault();
+      handleFileReader(file);
+      setClipboardToast('Image attached from clipboard!');
+      setTimeout(() => setClipboardToast(null), 3500);
     }
   };
+
+  const handlePasteFromClipboard = async () => {
+    setClipboardToast(null);
+    const result = await readImageFromClipboard();
+    if (result.dataUrl) {
+      addImageToUrls(result.dataUrl);
+      setClipboardToast('Screenshot image attached from clipboard!');
+      setTimeout(() => setClipboardToast(null), 3500);
+    } else if (result.text) {
+      if (!originalQuestion) {
+        setOriginalQuestion(result.text);
+        setClipboardToast('Pasted clipboard text into Question field!');
+      } else {
+        setClipboardToast('Clipboard contains text (paste into question or notes).');
+      }
+      setTimeout(() => setClipboardToast(null), 3500);
+    } else if (result.error) {
+      setClipboardToast(result.error);
+      setTimeout(() => setClipboardToast(null), 4000);
+    }
+  };
+
+  // Window-level paste listener so Ctrl+V anywhere in this form catches image screenshots!
+  useEffect(() => {
+    const handleGlobalPaste = (e: ClipboardEvent) => {
+      const file = extractImageFromClipboardEvent(e);
+      if (file) {
+        e.preventDefault();
+        handleFileReader(file);
+        setClipboardToast('Screenshot attached from clipboard (Ctrl+V)!');
+        setTimeout(() => setClipboardToast(null), 3500);
+      }
+    };
+
+    window.addEventListener('paste', handleGlobalPaste);
+    return () => window.removeEventListener('paste', handleGlobalPaste);
+  }, []);
   const [originalQuestion, setOriginalQuestion] = useState('');
   const [myAnswer, setMyAnswer] = useState('');
   const [correctAnswer, setCorrectAnswer] = useState('');
@@ -269,6 +305,48 @@ export function CreateMistakeView({
       setIsNewTopic(true);
     } else {
       setIsNewTopic(false);
+    }
+  };
+
+  const handleAiExtracted = (data: ExtractedMistakeData, extractedImgUrl?: string) => {
+    if (data.title) setTitle(data.title);
+    if (extractedImgUrl) {
+      addImageToUrls(extractedImgUrl);
+    }
+
+    if (data.suggestedSubject) {
+      const match = subjects.find(
+        (s) => s.name.toLowerCase() === data.suggestedSubject.toLowerCase()
+      );
+      if (match) {
+        setSelectedSubjectId(match.id);
+        setIsNewSubject(false);
+      } else {
+        setIsNewSubject(true);
+        setCustomSubjectName(data.suggestedSubject);
+      }
+    }
+
+    if (data.suggestedTopic) {
+      const match = topics.find(
+        (t) => t.name.toLowerCase() === data.suggestedTopic.toLowerCase()
+      );
+      if (match) {
+        setSelectedTopicId(match.id);
+        setIsNewTopic(false);
+      } else {
+        setIsNewTopic(true);
+        setCustomTopicName(data.suggestedTopic);
+      }
+    }
+
+    if (data.originalQuestion) setOriginalQuestion(data.originalQuestion);
+    if (data.myAnswer) setMyAnswer(data.myAnswer);
+    if (data.correctAnswer) setCorrectAnswer(data.correctAnswer);
+    if (data.correctExplanation) setCorrectExplanation(data.correctExplanation);
+    if (data.reflection) setReflection(data.reflection);
+    if (data.categories && data.categories.length > 0) {
+      setChosenCategories(data.categories);
     }
   };
 
@@ -392,6 +470,13 @@ export function CreateMistakeView({
           )}
         </div>
       )}
+
+      {/* FEATURE 1: AI SNAP & EXTRACT BAR */}
+      <AiSnapExtractBar
+        subjects={subjects}
+        topics={topics}
+        onExtracted={handleAiExtracted}
+      />
 
       <form onSubmit={handleSubmit} className="space-y-5">
         
@@ -651,10 +736,10 @@ export function CreateMistakeView({
                         </div>
                       )}
 
-                      <div className="flex gap-3 mt-1" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex flex-wrap justify-center gap-2.5 mt-1" onClick={(e) => e.stopPropagation()}>
                         <label 
                           htmlFor="file-upload-main"
-                          className="cursor-pointer flex flex-col items-center justify-center px-4 py-2 border border-stone-200 hover:border-stone-400 bg-white hover:bg-stone-50 rounded-xl transition-all shadow-xs text-center min-w-[110px]"
+                          className="cursor-pointer flex flex-col items-center justify-center px-3.5 py-2 border border-stone-200 hover:border-stone-400 bg-white hover:bg-stone-50 rounded-xl transition-all shadow-xs text-center min-w-[100px]"
                         >
                           <Upload className="w-4 h-4 text-[#5A5A40] mb-1" />
                           <span className="text-[10px] font-bold text-[#2D2A26]">
@@ -669,18 +754,41 @@ export function CreateMistakeView({
                             e.stopPropagation();
                             startCamera();
                           }}
-                          className="flex flex-col items-center justify-center px-4 py-2 border border-stone-200 hover:border-stone-400 bg-white hover:bg-stone-50 rounded-xl transition-all shadow-xs text-center min-w-[110px] cursor-pointer"
+                          className="flex flex-col items-center justify-center px-3.5 py-2 border border-stone-200 hover:border-stone-400 bg-white hover:bg-stone-50 rounded-xl transition-all shadow-xs text-center min-w-[100px] cursor-pointer"
                         >
                           <Camera className="w-4 h-4 text-[#5A5A40] mb-1" />
                           <span className="text-[10px] font-bold text-[#2D2A26]">
                             Take Photo
                           </span>
                         </button>
+
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            handlePasteFromClipboard();
+                          }}
+                          className="flex flex-col items-center justify-center px-3.5 py-2 border border-stone-200 hover:border-stone-400 bg-white hover:bg-stone-50 rounded-xl transition-all shadow-xs text-center min-w-[100px] cursor-pointer"
+                          title="Paste screenshot from clipboard or press Ctrl+V"
+                        >
+                          <Clipboard className="w-4 h-4 text-[#5A5A40] mb-1" />
+                          <span className="text-[10px] font-bold text-[#2D2A26]">
+                            Paste Clipboard
+                          </span>
+                        </button>
                       </div>
+
+                      {clipboardToast && (
+                        <div className="text-[11px] font-medium text-emerald-800 bg-emerald-50 border border-emerald-200 px-3 py-1 rounded-lg inline-flex items-center gap-1.5 animate-fade-in">
+                          <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                          <span>{clipboardToast}</span>
+                        </div>
+                      )}
 
                       <div className="text-center">
                         <span className="text-[10px] text-[#9A9184] block font-sans">
-                          Or click & paste image with <kbd className="px-1 py-0.5 bg-stone-100 border rounded text-[8px]">Ctrl+V</kbd>
+                          Or click anywhere in the box and press <kbd className="px-1.5 py-0.5 bg-stone-100 border border-stone-300 rounded text-[9px] font-mono font-semibold text-stone-700">Ctrl+V</kbd>
                         </span>
                         <span className="text-[8px] text-[#9A9184] font-mono mt-0.5 block">
                           PNG, JPG, WEBP formats (Max 2.5MB)

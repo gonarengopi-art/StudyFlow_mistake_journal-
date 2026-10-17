@@ -17,6 +17,7 @@ import {
   Compass,
   Briefcase
 } from 'lucide-react';
+import { copyToClipboard } from '../utils/clipboard';
 
 export interface Achievement {
   id: string;
@@ -59,10 +60,12 @@ export function AchievementShareModal({
     return `🏆 I unlocked the "${achievement.title}" achievement on StudyFlow!\n✨ Achievement: ${achievement.description}\n📈 My Stats: Logged ${stats.totalMistakes} mistakes (${stats.masteredCount} mastered) across ${stats.totalSubjects} subjects!\n🎯 Accelerating active recall mastery with offline-first precision!`;
   }, [achievement, stats]);
 
-  const handleCopyText = () => {
-    navigator.clipboard.writeText(shareText);
-    setCopySuccess(true);
-    setTimeout(() => setCopySuccess(false), 2000);
+  const handleCopyText = async () => {
+    const success = await copyToClipboard(shareText);
+    if (success) {
+      setCopySuccess(true);
+      setTimeout(() => setCopySuccess(false), 2000);
+    }
   };
 
   const handleNativeShare = async () => {

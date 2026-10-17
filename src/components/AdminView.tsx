@@ -44,7 +44,8 @@ export function AdminView({ user }: AdminViewProps) {
   const handleExportCSV = () => {
     const subscribers = adminUsers.filter(u => u.newsletterOptIn === true);
     if (subscribers.length === 0) {
-      alert("No newsletter subscribers to export.");
+      setError("No newsletter subscribers to export yet.");
+      setTimeout(() => setError(null), 4000);
       return;
     }
     

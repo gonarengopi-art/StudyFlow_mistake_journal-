@@ -4,9 +4,9 @@
  */
 
 import React from 'react';
-import { Layout, FolderClosed, PlusCircle, BarChart3, UserCircle, ShieldCheck } from 'lucide-react';
+import { Layout, FolderClosed, Users, PlusCircle, BarChart3, UserCircle, ShieldCheck } from 'lucide-react';
 
-export type ViewTab = 'dashboard' | 'topics' | 'add' | 'insights' | 'profile' | 'admin' | 'upgrade';
+export type ViewTab = 'dashboard' | 'topics' | 'squads' | 'add' | 'insights' | 'profile' | 'admin' | 'upgrade';
 
 interface BottomNavBarProps {
   currentView: ViewTab;
@@ -18,6 +18,7 @@ export function BottomNavBar({ currentView, onNavigate, isAdmin }: BottomNavBarP
   const tabs = [
     { id: 'dashboard' as ViewTab, label: 'Dashboard', icon: Layout },
     { id: 'topics' as ViewTab, label: 'Topics', icon: FolderClosed },
+    { id: 'squads' as ViewTab, label: 'Squads', icon: Users },
     { id: 'add' as ViewTab, label: 'Add', icon: PlusCircle, isCenter: true },
     { id: 'insights' as ViewTab, label: 'Insights', icon: BarChart3 },
     { id: 'profile' as ViewTab, label: 'Profile', icon: UserCircle },
